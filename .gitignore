@@ -1,0 +1,5 @@
+# ignore grouped-image folder
+grouped-images/
+
+#ignore venv folder
+venv/
