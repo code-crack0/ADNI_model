@@ -6,8 +6,10 @@ import torchvision.transforms as transforms
 import torchvision.models as models
 import nibabel as nib
 import numpy as np
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, random_split, Subset
 from PIL import Image
+from sklearn.model_selection import train_test_split
+from torchvision.models import ResNet18_Weights
 
 # Define dataset class
 class NiiDataset(Dataset):
@@ -34,11 +36,10 @@ class NiiDataset(Dataset):
         label = self.labels[idx]
 
         # Load NIfTI file
-        nii_img = nib.load(nii_path)
-        img_data = nii_img.get_fdata()
+        nii_img = nib.load(nii_path).get_fdata()
 
         # Get middle axial slice
-        mid_slice = img_data[:, :, img_data.shape[2] // 2]
+        mid_slice = nii_img[nii_img.shape[0] // 2, :, :]
 
         # Normalize image
         mid_slice = (mid_slice - np.min(mid_slice)) / (np.max(mid_slice) - np.min(mid_slice)) * 255.0
@@ -61,12 +62,17 @@ transform = transforms.Compose([
 ])
 
 # Load full dataset
-dataset = NiiDataset(root_dir="../grouped-images", transform=transform)
+dataset = NiiDataset(root_dir="./grouped_images", transform=transform)
 
-# Split dataset into train (80%) and validation (20%)
-train_size = int(0.8 * len(dataset))
-val_size = len(dataset) - train_size
-train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+# Stratified split into train (80%) and validation (20%)
+train_indices, val_indices = train_test_split(
+    range(len(dataset)),
+    test_size=0.2,
+    stratify=dataset.labels
+)
+
+train_dataset = Subset(dataset, train_indices)
+val_dataset = Subset(dataset, val_indices)
 
 train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
@@ -75,7 +81,9 @@ val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 class ResNetClassifier(nn.Module):
     def __init__(self, num_classes=3):
         super(ResNetClassifier, self).__init__()
-        self.model = models.resnet18(pretrained=True)
+        # self.model = models.resnet18(pretrained=True)
+        # using updated weights
+        self.model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
         self.model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)  # Adjust for single channel
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)  # Adjust output classes
 
@@ -83,7 +91,8 @@ class ResNetClassifier(nn.Module):
         return self.model(x)
 
 # Model setup
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device="cuda"
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ResNetClassifier(num_classes=3).to(device)
 
 # Define loss and optimizer
