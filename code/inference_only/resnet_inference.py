@@ -11,14 +11,14 @@ from glob import glob
 # Define class names and labels
 class_labels = {"AD": 0, "CN": 1, "MCI": 2}  # Assign numeric labels
 
-# Load Pretrained AlexNet
+# Load Pretrained ResNet
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = models.alexnet(pretrained=True)  # Change to other versions if needed
-model.classifier[6] = nn.Linear(model.classifier[6].in_features, len(class_labels))  # Adjust output layer
+model = models.resnet18(pretrained=True)  # Change to resnet50 if needed
+model.fc = nn.Linear(model.fc.in_features, len(class_labels))  # Adjust output layer
 model.to(device)
 model.eval()  # Set to inference mode
 
-# Transform for AlexNet Input
+# Transform for ResNet Input
 transform = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize((224, 224)),
@@ -48,7 +48,7 @@ class NiiDataset(Dataset):
         label = self.labels[idx]
 
         nii_img = nib.load(nii_path).get_fdata()
-        mid_slice = nii_img[:, :, nii_img.shape[2] // 2]  # Middle axial slice
+        mid_slice = nii_img[nii_img.shape[0] // 2,:, : ]  # Middle axial slice
         mid_slice = np.stack([mid_slice] * 3, axis=-1)  # Convert grayscale to 3-channel
 
         img_tensor = transform(mid_slice)

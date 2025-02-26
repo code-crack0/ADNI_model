@@ -11,17 +11,17 @@ from glob import glob
 # Define class names and labels
 class_labels = {"AD": 0, "CN": 1, "MCI": 2}  # Assign numeric labels
 
-# Load Pretrained ResNet
+# Load Pretrained EfficientNet
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = models.resnet18(pretrained=True)  # Change to resnet50 if needed
-model.fc = nn.Linear(model.fc.in_features, len(class_labels))  # Adjust output layer
+model = models.efficientnet_b3(pretrained=True)  # Change to other EfficientNet versions if needed
+model.classifier[1] = nn.Linear(model.classifier[1].in_features, len(class_labels))  # Adjust output layer
 model.to(device)
 model.eval()  # Set to inference mode
 
-# Transform for ResNet Input
+# Transform for EfficientNet Input
 transform = transforms.Compose([
     transforms.ToPILImage(),
-    transforms.Resize((224, 224)),
+    transforms.Resize((300,300)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
@@ -48,7 +48,7 @@ class NiiDataset(Dataset):
         label = self.labels[idx]
 
         nii_img = nib.load(nii_path).get_fdata()
-        mid_slice = nii_img[:, :, nii_img.shape[2] // 2]  # Middle axial slice
+        mid_slice = nii_img[nii_img.shape[0] // 2,:, : ]  # Middle axial slice
         mid_slice = np.stack([mid_slice] * 3, axis=-1)  # Convert grayscale to 3-channel
 
         img_tensor = transform(mid_slice)

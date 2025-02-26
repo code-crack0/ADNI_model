@@ -48,7 +48,7 @@ class NiiDataset(Dataset):
         label = self.labels[idx]
 
         nii_img = nib.load(nii_path).get_fdata()
-        mid_slice = nii_img[:, :, nii_img.shape[2] // 2]  # Middle axial slice
+        mid_slice = nii_img[nii_img.shape[0] // 2,:, : ]  # Middle axial slice
         mid_slice = np.stack([mid_slice] * 3, axis=-1)  # Convert grayscale to 3-channel
 
         img_tensor = transform(mid_slice)

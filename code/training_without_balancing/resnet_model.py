@@ -38,7 +38,7 @@ class NiiDataset(Dataset):
         img_data = nii_img.get_fdata()
 
         # Get middle axial slice
-        mid_slice = img_data[:, :, img_data.shape[2] // 2]
+        mid_slice = nii_img[nii_img.shape[0] // 2,:, : ]  # Middle axial slice
 
         # Normalize image
         mid_slice = (mid_slice - np.min(mid_slice)) / (np.max(mid_slice) - np.min(mid_slice)) * 255.0
