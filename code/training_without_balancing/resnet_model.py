@@ -41,7 +41,11 @@ class NiiDataset(Dataset):
         nii_img = nib.load(nii_path).get_fdata()
 
         # Get middle axial slice
+<<<<<<< HEAD:code/resnet_model.py
         mid_slice = nii_img[nii_img.shape[0] // 2, :, :]
+=======
+        mid_slice = nii_img[nii_img.shape[0] // 2,:, : ]  # Middle axial slice
+>>>>>>> a1cfe7dcb7d98601c8bc17f4ac203e38f9adaa3f:code/training_without_balancing/resnet_model.py
 
         # Normalize image
         mid_slice = (mid_slice - np.min(mid_slice)) / (np.max(mid_slice) - np.min(mid_slice)) * 255.0
