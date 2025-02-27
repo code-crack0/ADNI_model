@@ -10,6 +10,8 @@ from torch.utils.data import Dataset, DataLoader, random_split, Subset
 from PIL import Image
 from sklearn.model_selection import train_test_split
 from torchvision.models import ResNet18_Weights
+from collections import Counter
+from tqdm import tqdm
 
 # Define dataset class
 class NiiDataset(Dataset):
@@ -64,24 +66,57 @@ transform = transforms.Compose([
 # Load full dataset
 dataset = NiiDataset(root_dir="./grouped_images", transform=transform)
 
-# Stratified split into train (80%) and validation (20%)
-train_indices, val_indices = train_test_split(
+# # Stratified split into train (80%) and validation (20%)
+# train_indices, val_indices = train_test_split(
+#     range(len(dataset)),
+#     test_size=0.2,
+#     stratify=dataset.labels
+# )
+
+# train_dataset = Subset(dataset, train_indices)
+# val_dataset = Subset(dataset, val_indices)
+
+# First split: train (70%) and temp (30%)
+train_indices, temp_indices = train_test_split(
     range(len(dataset)),
-    test_size=0.2,
+    test_size=0.3,
     stratify=dataset.labels
+)
+
+# Second split: temp into validation (10% of total) and test (20% of total)
+val_indices, test_indices = train_test_split(
+    temp_indices,
+    test_size=2/3,  # 2/3 of 30% is 20% of the total dataset
+    stratify=[dataset.labels[i] for i in temp_indices]
 )
 
 train_dataset = Subset(dataset, train_indices)
 val_dataset = Subset(dataset, val_indices)
+test_dataset = Subset(dataset, test_indices)
+
+# Print class distribution in the full dataset
+print("Full dataset class distribution:", Counter(dataset.labels))
+
+# Print class distribution in the training set
+train_labels = [dataset.labels[i] for i in train_indices]
+print("Training set class distribution:", Counter(train_labels))
+
+# Print class distribution in the validation set
+val_labels = [dataset.labels[i] for i in val_indices]
+print("Validation set class distribution:", Counter(val_labels))
+
+# Print class distribution in the test set
+test_labels = [dataset.labels[i] for i in test_indices]
+print("Test set class distribution:", Counter(test_labels))
 
 train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
 
 # Define model (ResNet18 with single-channel input)
 class ResNetClassifier(nn.Module):
     def __init__(self, num_classes=3):
         super(ResNetClassifier, self).__init__()
-        # self.model = models.resnet18(pretrained=True)
         # using updated weights
         self.model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
         self.model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)  # Adjust for single channel
@@ -107,7 +142,7 @@ for epoch in range(num_epochs):
     correct, total = 0, 0
 
     # Training phase
-    for images, labels in train_loader:
+    for images, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} - Training"):
         images, labels = images.to(device), labels.to(device)
 
         optimizer.zero_grad()
@@ -128,7 +163,7 @@ for epoch in range(num_epochs):
     model.eval()
     val_loss, correct, total = 0.0, 0, 0
     with torch.no_grad():
-        for images, labels in val_loader:
+        for images, labels in tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} - Validation"):
             images, labels = images.to(device), labels.to(device)
 
             outputs = model(images)
@@ -147,3 +182,23 @@ for epoch in range(num_epochs):
           f"Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.2f}%")
 
 print("Training complete!")
+
+# Evaluate on test set
+model.eval()
+test_loss, correct, total = 0.0, 0, 0
+with torch.no_grad():
+    for images, labels in tqdm(test_loader, desc="Testing"):
+        images, labels = images.to(device), labels.to(device)
+
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+
+        test_loss += loss.item()
+        _, predicted = torch.max(outputs, 1)
+        correct += (predicted == labels).sum().item()
+        total += labels.size(0)
+
+test_loss /= len(test_loader)
+test_accuracy = correct / total * 100
+
+print(f"Test Loss: {test_loss:.4f}, Test Acc: {test_accuracy:.2f}%")
