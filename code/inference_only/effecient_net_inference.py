@@ -55,7 +55,7 @@ class NiiDataset(Dataset):
         return img_tensor, label
 
 # Load Dataset
-dataset_root = "../grouped-images"
+dataset_root = "../../grouped-images"
 dataset = NiiDataset(dataset_root)
 dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
 
