@@ -10,15 +10,32 @@
 
 ---
 
+## **Training & Validation Performance on Unbalanced Dataset**
+| Model          | Train Accuracy | Validation Accuracy|
+|---------------|----------|----------|
+| **AlexNet**   | 52.89%   | 52.75% |
+| **ResNet18**  | 62.17%   | 43.04% |
+| **EfficientNet** |  |  |
+| **VGG16**     |    |  |
+
+
+# not sure if we need this?
 ## **Training & Validation Performance (ResNet18)**
 - **Train Accuracy:** 62.17%
 - **Validation Accuracy:** 43.04%
 - **Test Accuracy:** 42.16%
 
+Train Acc: 52.89%, Val Loss: 1.0067, Val Acc: 52.75%
+
 ---
 
-## **Test Accuracy (VGG16)**
-- **Test Accuracy:** 52.99%
+## **Test Accuracy on Unbalanced Dataset**
+| Model          | Accuracy |
+|---------------|----------|
+| **VGG16**   | 52.99%   |
+| **Alexnet**  | 52.99%   |
+| **ResNet18** | 42.16% |
+| ****     |    |
 
 ---
 

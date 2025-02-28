@@ -6,10 +6,9 @@ import torchvision.transforms as transforms
 import torchvision.models as models
 import nibabel as nib
 import numpy as np
-from torch.utils.data import Dataset, DataLoader, random_split, Subset
+from torch.utils.data import Dataset, DataLoader, Subset
 from PIL import Image
 from sklearn.model_selection import train_test_split
-from torchvision.models import ResNet18_Weights
 from collections import Counter
 from tqdm import tqdm
 
@@ -58,7 +57,7 @@ class NiiDataset(Dataset):
 
 # Define transformations
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Resize((300, 300)),  # EfficientNet-B3 expects 300x300 input size
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.5], std=[0.5])  # Single channel normalization
 ])
@@ -103,22 +102,22 @@ train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
 
-# Define model (ResNet18 with single-channel input)
-class ResNetClassifier(nn.Module):
+# Define model (EfficientNet-B3 with single-channel input)
+class EfficientNetB3Classifier(nn.Module):
     def __init__(self, num_classes=3):
-        super(ResNetClassifier, self).__init__()
+        super(EfficientNetB3Classifier, self).__init__()
         # using updated weights
-        self.model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
-        self.model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)  # Adjust for single channel
-        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)  # Adjust output classes
+        self.model = models.efficientnet_b3(weights=models.EfficientNet_B3_Weights.DEFAULT)
+        self.model.features[0][0] = nn.Conv2d(1, 40, kernel_size=3, stride=2, padding=1)  # Adjust for single channel
+        self.model.classifier[1] = nn.Linear(self.model.classifier[1].in_features, num_classes)  # Adjust output classes
 
     def forward(self, x):
         return self.model(x)
 
 # Model setup
-device = torch.device("cuda:0")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
-model = ResNetClassifier(num_classes=3).to(device)
+model = EfficientNetB3Classifier(num_classes=3).to(device)
 
 # Define loss and optimizer
 criterion = nn.CrossEntropyLoss()

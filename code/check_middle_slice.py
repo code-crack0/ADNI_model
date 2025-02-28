@@ -9,8 +9,6 @@ nii_img = nib.load(nii_path).get_fdata()
 # Extract the middle axial slice
 mid_slice = nii_img[nii_img.shape[0] // 2, :, :]
 
-
-
 # Display using matplotlib
 plt.imshow(mid_slice, cmap="gray")  # Use grayscale colormap
 plt.title("Middle Axial Slice")
