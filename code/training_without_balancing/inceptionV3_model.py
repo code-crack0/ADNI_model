@@ -6,10 +6,9 @@ import torchvision.transforms as transforms
 import torchvision.models as models
 import nibabel as nib
 import numpy as np
-from torch.utils.data import Dataset, DataLoader, random_split, Subset
+from torch.utils.data import Dataset, DataLoader, Subset
 from PIL import Image
 from sklearn.model_selection import train_test_split
-from torchvision.models import ResNet18_Weights
 from collections import Counter
 from tqdm import tqdm
 
@@ -58,9 +57,11 @@ class NiiDataset(Dataset):
 
 # Define transformations
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Resize((299, 299)),  # Inception v3 expects 299x299 input size
+    transforms.Grayscale(num_output_channels=3),  # Convert single channel to 3 channels
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5], std=[0.5])  # Single channel normalization
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    # transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # 3-channel normalization
 ])
 
 # Load full dataset
@@ -103,22 +104,22 @@ train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
 
-# Define model (ResNet18 with single-channel input)
-class ResNetClassifier(nn.Module):
+# Define model (Inception v3 with single-channel input)
+class InceptionV3Classifier(nn.Module):
     def __init__(self, num_classes=3):
-        super(ResNetClassifier, self).__init__()
+        super(InceptionV3Classifier, self).__init__()
         # using updated weights
-        self.model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
-        self.model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)  # Adjust for single channel
+        self.model = models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT)
+        self.model.Conv2d_1a_3x3.conv = nn.Conv2d(3, 32, kernel_size=3, stride=2)  # Adjust for 3 channels
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)  # Adjust output classes
 
     def forward(self, x):
         return self.model(x)
 
 # Model setup
-device = torch.device("cuda:0")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
-model = ResNetClassifier(num_classes=3).to(device)
+model = InceptionV3Classifier(num_classes=3).to(device)
 
 # Define loss and optimizer
 criterion = nn.CrossEntropyLoss()
@@ -137,7 +138,11 @@ for epoch in range(num_epochs):
 
         optimizer.zero_grad()
         outputs = model(images)
-        loss = criterion(outputs, labels)
+        if isinstance(outputs, models.inception.InceptionOutputs):
+            loss = criterion(outputs.logits, labels)  # Use .logits to get the main output during training
+            outputs = outputs.logits
+        else:
+            loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
 
@@ -157,7 +162,11 @@ for epoch in range(num_epochs):
             images, labels = images.to(device), labels.to(device)
 
             outputs = model(images)
-            loss = criterion(outputs, labels)
+            if isinstance(outputs, models.inception.InceptionOutputs):
+                loss = criterion(outputs.logits, labels)  # Use .logits to get the main output during training
+                outputs = outputs.logits
+            else:
+                loss = criterion(outputs, labels)
 
             val_loss += loss.item()
             _, predicted = torch.max(outputs, 1)
@@ -181,6 +190,8 @@ with torch.no_grad():
         images, labels = images.to(device), labels.to(device)
 
         outputs = model(images)
+        if isinstance(outputs, models.inception.InceptionOutputs):
+            outputs = outputs.logits  # Use .logits to get the main output during training
         loss = criterion(outputs, labels)
 
         test_loss += loss.item()

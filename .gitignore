@@ -1,5 +1,8 @@
 # ignore grouped-image folder
-grouped-images/
+/code/grouped-images/
+
+# ignore all nii files
+*.nii
 
 #ignore venv folder
 venv/
