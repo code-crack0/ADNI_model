@@ -22,7 +22,7 @@
 
 ---
 
-## **Training Details (ResNet50)**
+## **Training Details (ResNet50 - With UnderSampling)**
 | Epoch | Train Loss | Train Accuracy | Val Loss | Val Accuracy |
 |-------|-----------|---------------|----------|-------------|
 | 1     | 1.1471    | 37.28%        | 1.1009   | 30.69%      |
@@ -57,3 +57,18 @@
 
 ### **Conclusion**
 ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting need further investigation to improve generalization.
+
+
+## **Training Details (ResNet50 - With Augmentation)**
+| **Epoch** | **Train Loss** | **Train Accuracy** | **Val Loss** | **Val Accuracy** |
+|-----------|----------------|--------------------|--------------|------------------|
+| 1         | 1.0394         | 48.42%             | 0.9872       | 53.31%           |
+| 2         | 0.9890         | 52.06%             | 1.1293       | 49.27%           |
+| 3         | 0.9812         | 52.71%             | 1.1625       | 32.15%           |
+| 4         | 0.9790         | 52.55%             | 1.0030       | 52.83%           |
+| 5         | 0.9765         | 51.82%             | 0.9682       | 52.83%           |
+| 6         | 0.9513         | 52.67%             | 1.0748       | 55.74%           |
+| 7         | 0.9344         | 53.88%             | 0.9762       | 54.77%           |
+| 8         | 0.9209         | 53.96%             | 0.9279       | 53.63%           |
+| 9         | 0.8993         | 54.28%             | 1.0337       | 52.83%           |
+| 10        | 0.9288         | 54.69%             | 0.9687       | 48.79%           |
