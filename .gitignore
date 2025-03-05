@@ -1,8 +1,10 @@
 # ignore grouped-image folder
-/code/grouped-images/
+grouped-images/
 
 # ignore all nii files
 *.nii
 
 #ignore venv folder
 venv/
+
+/metadata.csv
