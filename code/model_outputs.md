@@ -20,6 +20,8 @@
 | **VGG16**     |  52.89%  | 52.75% | 52.99% | 
 | **InceptionV3** |  51.78%  | 47.25% | 47.98% | 
 
+
+
 ---
 
 ## **Training Details (ResNet50 - With UnderSampling)**
