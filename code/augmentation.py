@@ -8,8 +8,8 @@ from torchvision import transforms
 from PIL import Image
 
 # Define paths
-original_dir = "../grouped-images"
-augmented_dir = "../augmented-images"
+original_dir = "./grouped-images"
+augmented_dir = "./augmented-images"
 os.makedirs(augmented_dir, exist_ok=True)
 
 # Define transformations

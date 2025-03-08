@@ -11,7 +11,7 @@
 
 ---
 
-### Model Performance with Imbalanced Dataset
+## **Model Performance with Imbalanced Dataset**
 
 | Model          | Train Accuracy | Validation Accuracy| Test Accuracy |
 |---------------|----------|----------|------------|
@@ -20,8 +20,6 @@
 | **EfficientNetb3** | 83.28% | 59.87% | 58.80% |  
 | **VGG16**     |  52.89%  | 52.75% | 52.99% | 
 | **InceptionV3** |  51.78%  | 47.25% | 47.98% | 
-
-
 
 ---
 
@@ -60,7 +58,6 @@
 
 ### **Conclusion**
 ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting need further investigation to improve generalization.
-
 
 ## **Training Details (Augmentation)**
 
