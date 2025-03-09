@@ -84,7 +84,7 @@ model = InceptionV3Classifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
 # previous learning rate was 0.0001
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-3)
+optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, weight_decay=1e-3)
 
 # Keep the scheduler
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
