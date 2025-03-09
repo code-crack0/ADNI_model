@@ -40,11 +40,13 @@ class PngDataset(Dataset):
 
         return img, label
 
-# ResNet18 expects 224x224 images; we'll use single-channel grayscale images directly.
+# EfficientNet-B3 expects 300x300 RGB images
 train_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Grayscale(num_output_channels=3),  # convert grayscale to RGB (3 channels)
+    transforms.Resize((300, 300)),                # EfficientNet-B3 input size is 300x300
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485], std=[0.229])
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                         std=[0.229, 0.224, 0.225])
 ])
 
 dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
@@ -59,47 +61,24 @@ val_subset   = Subset(dataset, val_idx)
 train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
 val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 
-# ResNet18 classifier definition modified for grayscale input (1 channel)
-class ResNet18Classifier(nn.Module):
+# EfficientNet-B3 classifier definition modified for 3-class output
+class EfficientNetB3Classifier(nn.Module):
     def __init__(self, num_classes=3):
-        super(ResNet18Classifier, self).__init__()
+        super(EfficientNetB3Classifier, self).__init__()
         
-        weights = models.ResNet18_Weights.DEFAULT
-        self.model = models.resnet18(weights=weights)
+        weights = models.EfficientNet_B3_Weights.DEFAULT
+        self.model = models.efficientnet_b3(weights=weights)
         
-        # Change first conv layer to accept single-channel (grayscale) input
-        self.model.conv1 = nn.Conv2d(1, 64,
-                                     kernel_size=(7, 7),
-                                     stride=(2, 2),
-                                     padding=(3, 3),
-                                     bias=False)
-        
-        num_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(num_features, num_classes)
+        num_features = self.model.classifier[1].in_features
+        self.model.classifier[1] = nn.Linear(num_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
 
-# Data transformations for ResNet18 (224x224 grayscale images)
-train_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485], std=[0.229])
-])
-
-dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
-
-train_subset.dataset.transform = train_transform
-val_subset.dataset.transform   = train_transform
-
-train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
-val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = ResNet18Classifier(num_classes=3).to(device)
+model = EfficientNetB3Classifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
-# learning rate of 0.0001
 optimizer = optim.SGD(model.parameters(), lr=0.0001,
                       momentum=0.9,
                       weight_decay=1e-3)
@@ -110,7 +89,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 20
+num_epochs = 10
 
 for epoch in range(num_epochs):
     model.train()
@@ -165,6 +144,3 @@ for epoch in range(num_epochs):
                                 accuracy=f"{100*correct_val/total_val:.2f}%")
 
     scheduler.step(running_loss_val / len(val_loader))
-
-print("Training complete!")
- 
