@@ -147,4 +147,4 @@ for epoch in range(num_epochs):
 
     scheduler.step(running_loss_val / len(val_loader))
 
-print("🎉 Training complete!")
+print("Training complete!")

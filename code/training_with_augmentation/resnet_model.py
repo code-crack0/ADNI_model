@@ -87,13 +87,8 @@ train_transform = transforms.Compose([
     transforms.Normalize(mean=[0.485], std=[0.229])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
-
 train_subset.dataset.transform = train_transform
 val_subset.dataset.transform   = train_transform
-
-train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
-val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ResNet18Classifier(num_classes=3).to(device)
