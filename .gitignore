@@ -1,10 +1,28 @@
-# ignore grouped-image folder
-grouped-images/
+# Bytecode files
+*.pyc
+*.pyo
+__pycache__/
 
-# ignore all nii files
+# Data and Image files
+*.pth
+*.png
+*.jpg
+*.jpeg
+*.csv
+*.md
 *.nii
-
-#ignore venv folder
+# Environment files
 venv/
+.env
 
-/metadata.csv
+# OS generated files
+.DS_Store
+
+#Ignore all directories
+*/augmented-images/*
+*/grouped-images/*
+
+# Logs and temp files
+*.log
+temp/
+tmp/
