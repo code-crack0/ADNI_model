@@ -8,7 +8,7 @@ import torchvision.models as models
 from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.model_selection import StratifiedKFold
 from PIL import Image
-from tqdm import tqdm
+from tqdm import tqdm  # added tqdm for progress bars
 
 # Dataset class definition (unchanged)
 class PngDataset(Dataset):
@@ -40,16 +40,16 @@ class PngDataset(Dataset):
 
         return img, label
 
-# ResNet18 expects 224x224 images; we'll use single-channel grayscale images directly.
+# Transformations (unchanged)
 train_transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485], std=[0.229])
+    transforms.Normalize(mean=[0.5], std=[0.5])
 ])
 
 dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
 
-# Stratified split (80/20)
+# Stratified split (unchanged)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 train_idx, val_idx = next(skf.split(np.zeros(len(dataset.labels)), dataset.labels))
 
@@ -59,48 +59,33 @@ val_subset   = Subset(dataset, val_idx)
 train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
 val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 
-# ResNet18 classifier definition modified for grayscale input (1 channel)
-class ResNet18Classifier(nn.Module):
+class AlexNetClassifier(nn.Module):
     def __init__(self, num_classes=3):
-        super(ResNet18Classifier, self).__init__()
+        super(AlexNetClassifier, self).__init__()
         
-        weights = models.ResNet18_Weights.DEFAULT
-        self.model = models.resnet18(weights=weights)
+        # Load pretrained AlexNet model
+        weights = models.AlexNet_Weights.DEFAULT
+        self.model = models.alexnet(weights=weights)
+
+        # Modify first conv layer to accept grayscale images (1 channel)
+        original_weights = self.model.features[0].weight.data.mean(dim=1, keepdim=True)
+        self.model.features[0] = nn.Conv2d(1, 64, kernel_size=11, stride=4, padding=2)
         
-        # Change first conv layer to accept single-channel (grayscale) input
-        self.model.conv1 = nn.Conv2d(1, 64,
-                                     kernel_size=(7, 7),
-                                     stride=(2, 2),
-                                     padding=(3, 3),
-                                     bias=False)
-        
-        num_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(num_features, num_classes)
+        with torch.no_grad():
+            self.model.features[0].weight.copy_(original_weights)
+
+        # Adjust classifier for our number of classes (3)
+        num_features = self.model.classifier[6].in_features
+        self.model.classifier[6] = nn.Linear(num_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
 
-# Data transformations for ResNet18 (224x224 grayscale images)
-train_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485], std=[0.229])
-])
-
-dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
-
-train_subset.dataset.transform = train_transform
-val_subset.dataset.transform   = train_transform
-
-train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
-val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = ResNet18Classifier(num_classes=3).to(device)
+model = AlexNetClassifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
-# learning rate of 0.0001
-optimizer = optim.SGD(model.parameters(), lr=0.0001,
+optimizer = optim.SGD(model.parameters(), lr=0.001,
                       momentum=0.9,
                       weight_decay=1e-3)
 
@@ -152,14 +137,14 @@ for epoch in range(num_epochs):
             images_val, labels_val = images_val.to(device), labels_val.to(device)
 
             outputs_val = model(images_val)
-            loss_val     = criterion(outputs_val, labels_val)
+            loss_val = criterion(outputs_val, labels_val)
 
             running_loss_val += loss_val.item()
 
-            _, predicted_val   = torch.max(outputs_val.data, 1)
+            _, predicted_val = torch.max(outputs_val.data, 1)
             
             correct_val += (predicted_val == labels_val).sum().item()
-            total_val   += labels_val.size(0)
+            total_val += labels_val.size(0)
 
             val_bar.set_postfix(loss=f"{running_loss_val/len(val_loader):.4f}",
                                 accuracy=f"{100*correct_val/total_val:.2f}%")
@@ -167,4 +152,5 @@ for epoch in range(num_epochs):
     scheduler.step(running_loss_val / len(val_loader))
 
 print("Training complete!")
- 
+
+
