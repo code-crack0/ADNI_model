@@ -59,6 +59,9 @@ val_subset   = Subset(dataset, val_idx)
 train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
 val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 
+train_subset.dataset.transform = train_transform
+val_subset.dataset.transform   = train_transform
+
 # ResNet18 classifier definition modified for grayscale input (1 channel)
 class ResNet18Classifier(nn.Module):
     def __init__(self, num_classes=3):
@@ -79,16 +82,6 @@ class ResNet18Classifier(nn.Module):
 
     def forward(self, x):
         return self.model(x)
-
-# Data transformations for ResNet18 (224x224 grayscale images)
-train_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485], std=[0.229])
-])
-
-train_subset.dataset.transform = train_transform
-val_subset.dataset.transform   = train_transform
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ResNet18Classifier(num_classes=3).to(device)
