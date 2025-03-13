@@ -14,7 +14,9 @@ os.makedirs(augmented_dir, exist_ok=True)
 
 # Define transformations
 transform = transforms.Compose([
+    # maybe add rotate 180 degrees
     transforms.RandomHorizontalFlip(p=1.0),
+    # too much try less values or remove it all together
     transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.5], std=[0.5])

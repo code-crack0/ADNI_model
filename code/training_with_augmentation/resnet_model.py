@@ -10,7 +10,7 @@ from sklearn.model_selection import StratifiedKFold
 from PIL import Image
 from tqdm import tqdm
 
-# Dataset class definition (unchanged)
+# Dataset class definition (updated)
 class PngDataset(Dataset):
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
@@ -34,6 +34,8 @@ class PngDataset(Dataset):
         label = self.labels[idx]
 
         img = Image.open(img_path).convert("L")  # grayscale
+        img = np.stack([np.array(img)] * 3, axis=-1)  # replicate into 3 channels
+        img = Image.fromarray(img)
 
         if self.transform:
             img = self.transform(img)
@@ -44,7 +46,7 @@ class PngDataset(Dataset):
 train_transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485], std=[0.229])
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
 dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
@@ -62,20 +64,13 @@ val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 train_subset.dataset.transform = train_transform
 val_subset.dataset.transform   = train_transform
 
-# ResNet18 classifier definition modified for grayscale input (1 channel)
+# ResNet18 classifier definition (unchanged)
 class ResNet18Classifier(nn.Module):
     def __init__(self, num_classes=3):
         super(ResNet18Classifier, self).__init__()
         
         weights = models.ResNet18_Weights.DEFAULT
         self.model = models.resnet18(weights=weights)
-        
-        # Change first conv layer to accept single-channel (grayscale) input
-        self.model.conv1 = nn.Conv2d(1, 64,
-                                     kernel_size=(7, 7),
-                                     stride=(2, 2),
-                                     padding=(3, 3),
-                                     bias=False)
         
         num_features = self.model.fc.in_features
         self.model.fc = nn.Linear(num_features, num_classes)
@@ -87,7 +82,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ResNet18Classifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
-# learning rate of 0.0001
 optimizer = optim.SGD(model.parameters(), lr=0.0001,
                       momentum=0.9,
                       weight_decay=1e-3)
@@ -155,4 +149,3 @@ for epoch in range(num_epochs):
     scheduler.step(running_loss_val / len(val_loader))
 
 print("Training complete!")
- 
