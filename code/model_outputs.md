@@ -203,3 +203,13 @@ ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting n
 | 8/10      | 0.0723         | 97.86%        | 0.9950       | 69.96%      |
 | 9/10      | 0.0303         | 99.24%        | 1.0609       | 69.96%      |
 | 10/10     | 0.0214         | 99.59%        | 1.0446       | 71.79%      |
+
+## Model Performance for augmented-images-v3
+
+| Model         | Training Accuracy | Validation Accuracy | Epochs | Learning Rate |
+|---------------|-------------------|---------------------|--------|---------------|
+| InceptionV3   | 99.28%            | 71.43%              | 15     | 0.001         |
+| InceptionV3   | 92.18%            | 56.78%              | 15     | 0.0001        |
+| EffcientNetB3 | 79.65%            | 59.86%              | 10     | 0.001         |
+
+

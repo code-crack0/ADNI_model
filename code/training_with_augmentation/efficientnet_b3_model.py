@@ -49,7 +49,7 @@ train_transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
 
 # Stratified split (80/20)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -79,7 +79,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = EfficientNetB3Classifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.0001,
+optimizer = optim.SGD(model.parameters(), lr=0.001,
                       momentum=0.9,
                       weight_decay=1e-3)
 

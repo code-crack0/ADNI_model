@@ -57,8 +57,8 @@ train_idx, val_idx = next(skf.split(np.zeros(len(dataset.labels)), dataset.label
 train_subset = Subset(dataset, train_idx)
 val_subset   = Subset(dataset, val_idx)
 
-train_loader = DataLoader(train_subset, batch_size=8, shuffle=True)
-val_loader   = DataLoader(val_subset, batch_size=8, shuffle=False)
+train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
+val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 
 class InceptionV3Classifier(nn.Module):
     def __init__(self, num_classes=3):
@@ -84,7 +84,7 @@ model = InceptionV3Classifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
 # previous learning rate was 0.0001
-optimizer = optim.SGD(model.parameters(), lr=0.0000005, momentum=0.9, weight_decay=1e-3)
+optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, weight_decay=1e-3)
 
 # Keep the scheduler
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
@@ -93,7 +93,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 100
+num_epochs = 15
 
 for epoch in range(num_epochs):
     model.train()
