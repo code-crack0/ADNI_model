@@ -1,10 +1,26 @@
 # ignore grouped-image folder
 grouped-images/
 
+# ignore grouped-image folder
+grouped-images-test/
+
 # ignore all nii files
 *.nii
 
 #ignore venv folder
 venv/
 
+# ignore metadata.csv
 /metadata.csv
+
+# ignore augmented-images folder
+augmented-images/
+
+# ignore augmented-images folder
+augmented-images-test/
+
+# ignore augmented-images folder
+augmented-images-v2/
+
+# ignore augmented-images folder
+augmented-images-v3/

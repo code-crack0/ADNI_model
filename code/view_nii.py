@@ -3,7 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Set the path to your NIfTI file here
-file_path = "./grouped_images/AD/ADNI_002_S_0619_MR_MPR-R__GradWarp__B1_Correction_Br_20081015125601708_S55373_I120990.nii"
+# file_path = "./grouped-images/AD/ADNI_002_S_0619_MR_MPR-R__GradWarp__B1_Correction_Br_20081015125601708_S55373_I120990.nii"
+# file_path = "./grouped-images/AD/ADNI_005_S_0221_MR_MPR-R__GradWarp__B1_Correction_Br_20080410142515399_S28460_I102059.nii"
+file_path = "./grouped-images/AD/ADNI_002_S_0938_MR_MPR-R__GradWarp__B1_Correction_Br_20070713122900520_S29621_I60044.nii"
 
 # Load NIfTI file
 print(f"Loading NIfTI file from {file_path}")

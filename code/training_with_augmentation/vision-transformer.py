@@ -4,11 +4,11 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
-import torchvision.models as models
 from torch.utils.data import Dataset, DataLoader, Subset
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold
 from PIL import Image
 from tqdm import tqdm
+import timm
 
 # Dataset class definition (updated)
 class PngDataset(Dataset):
@@ -42,18 +42,18 @@ class PngDataset(Dataset):
 
         return img, label
 
-# ResNet18 expects 224x224 images; we'll use single-channel grayscale images directly.
+# Define transformations
 train_transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
 
-# Stratified split (80/20)
-skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-train_idx, val_idx = next(skf.split(np.zeros(len(dataset.labels)), dataset.labels))
+# KFold split (80/20)
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+train_idx, val_idx = next(kf.split(np.zeros(len(dataset))))
 
 train_subset = Subset(dataset, train_idx)
 val_subset   = Subset(dataset, val_idx)
@@ -64,25 +64,21 @@ val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 train_subset.dataset.transform = train_transform
 val_subset.dataset.transform   = train_transform
 
-# ResNet18 classifier definition (unchanged)
-class ResNet18Classifier(nn.Module):
+# Vision Transformer classifier definition
+class ViTClassifier(nn.Module):
     def __init__(self, num_classes=3):
-        super(ResNet18Classifier, self).__init__()
-        
-        weights = models.ResNet18_Weights.DEFAULT
-        self.model = models.resnet18(weights=weights)
-        
-        num_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(num_features, num_classes)
+        super(ViTClassifier, self).__init__()
+        self.model = timm.create_model('vit_base_patch16_224', pretrained=True)
+        self.model.head = nn.Linear(self.model.head.in_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = ResNet18Classifier(num_classes=3).to(device)
+model = ViTClassifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.0001,
+optimizer = optim.SGD(model.parameters(), lr=0.001,
                       momentum=0.9,
                       weight_decay=1e-3)
 
@@ -92,7 +88,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 20
+num_epochs = 10
 
 for epoch in range(num_epochs):
     model.train()
