@@ -14,7 +14,7 @@ venv/
 /metadata.csv
 
 # ignore augmented-images folder
-augmented-images/
+augmented-images-v1/
 
 # ignore augmented-images folder
 augmented-images-test/

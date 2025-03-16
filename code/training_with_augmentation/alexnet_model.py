@@ -47,7 +47,7 @@ train_transform = transforms.Compose([
     transforms.Normalize(mean=[0.5], std=[0.5])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
 
 # Stratified split (unchanged)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -95,7 +95,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 20
+num_epochs = 15
 
 for epoch in range(num_epochs):
     model.train()

@@ -88,7 +88,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 10
+num_epochs = 25
 
 for epoch in range(num_epochs):
     model.train()
