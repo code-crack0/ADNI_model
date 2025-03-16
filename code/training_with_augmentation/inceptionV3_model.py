@@ -48,7 +48,7 @@ train_transform = transforms.Compose([
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v2", transform=train_transform)
 
 # Stratified split (unchanged)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)

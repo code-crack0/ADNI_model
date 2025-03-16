@@ -49,7 +49,7 @@ train_transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v2", transform=train_transform)
 
 # KFold split (80/20)
 kf = KFold(n_splits=5, shuffle=True, random_state=42)

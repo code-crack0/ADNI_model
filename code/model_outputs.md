@@ -59,9 +59,8 @@
 ### **Conclusion**
 ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting need further investigation to improve generalization.
 
-## **Model Performance for augmented-images-v1 (flip and jitter)**
+## Model Performance for augmented-images-v1 (horizontal flip and jitter)
 
-### ResNet50
 | **Model**     | **Train Loss** | **Train Accuracy** | **Val Loss** | **Val Accuracy** | **Epochs** | **Learing Rate** |
 |---------------|----------------|--------------------|--------------|------------------|------------|------------------|
 | ResNet50      | 0.9288         | 54.69%             | 0.9687       | 48.79%           | 10         |        NA        |
@@ -72,12 +71,19 @@ ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting n
 | EffNetB3      | 0.8974         | 55.86%             | 0.8681       | 56.72%           | 10         | 0.0001           |
 | ResNet18      | 0.0214         | 99.59%             | 1.0446       | 71.79%           | 10         | 0.001            |
 
-## Model Performance for augmented-images-v3 (horizontal and vertical flips)
+## Model Performance for augmented-images-v2 (horizontal flip and vertical flip)
+
+| **Model**     | **Train Loss** | **Train Accuracy** | **Val Loss** | **Val Accuracy** | **Epochs** | **Learing Rate** |
+|---------------|----------------|--------------------|--------------|------------------|------------|------------------|
+| ViT           | 0.0065         | 99.80%             | 2.8423       | 53.77%           | 25         | 0.001            |
+| InceptionV3   | 0.1235         | 97.43%             | 0.9228       | 63.03%           | 15         | 0.0001           |
+
+## Model Performance for augmented-images-v3 (horizontal flips, 900 ~ samples per class)
 
 | Model         | Training Accuracy | Validation Accuracy | Epochs | **Learning Rate** |
-|---------------|-------------------|---------------------|--------|---------------|
-| InceptionV3   | 99.28%            | 71.43%              | 15     | 0.001         |
-| InceptionV3   | 92.18%            | 56.78%              | 15     | 0.0001        |
-| EffcientNetB3 | 79.65%            | 59.86%              | 10     | 0.001         |
-| AlextNet      | 51.24%            | 44.85%              | 15     | 0.001         |
-| ViT           | %            | %              | 25     | 0.001         |
+|---------------|-------------------|---------------------|--------|-------------------|
+| InceptionV3   | 99.28%            | 71.43%              | 15     | 0.001             |
+| InceptionV3   | 92.18%            | 56.78%              | 15     | 0.0001            |
+| EffcientNetB3 | 79.65%            | 59.86%              | 10     | 0.001             |
+| AlextNet      | 51.24%            | 44.85%              | 15     | 0.001             |
+| ViT           | 93.89%            | 46.47%              | 25     | 0.001             | 
