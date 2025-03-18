@@ -59,7 +59,7 @@
 ### **Conclusion**
 ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting need further investigation to improve generalization.
 
-## Model Performance for augmented-images-v1 (horizontal flip and jitter)
+## Model Performance for augmented-images-v1 (horizontal flip and color jitter)
 
 | **Model**     | **Train Loss** | **Train Accuracy** | **Val Loss** | **Val Accuracy** | **Epochs** | **Learing Rate** |
 |---------------|----------------|--------------------|--------------|------------------|------------|------------------|
@@ -67,7 +67,7 @@ ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting n
 | VGGNET        | 0.0139         | 99.75%             | 1.5022       | 72.91%           | 20         |        NA        |
 | AlexNet       | 0 .4233        | 81 .58%            | 0.8465       | 67.72%           | 20         |        NA        |
 | InceptionV3   | 0.0134         | 99.72%             | 0.9121       | 73.52%           | 20         |        NA        |
-| EffNetB3      | 0 .7023        | 67 .14%            | 0 .7755      | 62 .93%          | 20         |        NA        |
+| EffNetB3      | 0.7023         | 67.14%             | 0.7755       | 62.93%           | 20         |        NA        |
 | EffNetB3      | 0.8974         | 55.86%             | 0.8681       | 56.72%           | 10         | 0.0001           |
 | ResNet18      | 0.0214         | 99.59%             | 1.0446       | 71.79%           | 10         | 0.001            |
 
@@ -87,3 +87,7 @@ ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting n
 | EffcientNetB3 | 79.65%            | 59.86%              | 10     | 0.001             |
 | AlextNet      | 51.24%            | 44.85%              | 15     | 0.001             |
 | ViT           | 93.89%            | 46.47%              | 25     | 0.001             | 
+| MobileNet_V2  | 99.59%            | 62.37%              | 15     | 0.001             |
+| DenseNet-121  | 99.77%            | 71.07%              | 15     | 0.001             |
+| ResNet18      | 99.19%            | 57.14%              | 20     | 0.0001            |
+| ResNet18      | 100%              | 64.92%              | 15     | 0.001             |
