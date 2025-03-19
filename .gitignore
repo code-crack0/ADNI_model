@@ -1,5 +1,5 @@
 # ignore grouped-image folder
-grouped-images/
+grouped-images-nii/
 
 # ignore grouped-image folder
 grouped-images-test/
@@ -24,3 +24,18 @@ augmented-images-v2/
 
 # ignore augmented-images folder
 augmented-images-v3/
+
+# ignore augmented-images folder
+grouped-images-png/
+
+images/
+
+resnet-test.py
+
+augmented-images-v3-Demo/
+
+inception_v3_model.pth
+
+inception_v3_model.rar
+
+
