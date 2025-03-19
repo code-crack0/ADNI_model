@@ -10,7 +10,7 @@ from sklearn.model_selection import StratifiedKFold
 from PIL import Image
 from tqdm import tqdm
 
-# Dataset class definition (unchanged)
+# Dataset class definition
 class PngDataset(Dataset):
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
@@ -34,26 +34,28 @@ class PngDataset(Dataset):
         label = self.labels[idx]
 
         img = Image.open(img_path).convert("L")  # grayscale
+        img = np.stack([np.array(img)] * 3, axis=-1)  # replicate into 3 channels
+        img = Image.fromarray(img)
 
         if self.transform:
             img = self.transform(img)
 
         return img, label
 
-# EfficientNet-B3 expects 300x300 RGB images
+# Transformations for ResNet18 (224x224 RGB)
 train_transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=3),  # convert grayscale to RGB (3 channels)
-    transforms.Resize((300, 300)),                # EfficientNet-B3 input size is 300x300
+    transforms.Grayscale(num_output_channels=3),  # grayscale to RGB
+    transforms.Resize((224, 224)),                # ResNet18 input size
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                         std=[0.229, 0.224, 0.225])
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225]) # ImageNet normalization
 ])
 
 dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
 
-# Stratified split (80/20)
+# Stratified split into train/validation sets (80/20)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-train_idx, val_idx = next(skf.split(np.zeros(len(dataset.labels)), dataset.labels))
+train_idx, val_idx = next(skf.split(np.zeros(len(dataset)), dataset.labels))
 
 train_subset = Subset(dataset, train_idx)
 val_subset   = Subset(dataset, val_idx)
@@ -61,22 +63,23 @@ val_subset   = Subset(dataset, val_idx)
 train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
 val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 
-# EfficientNet-B3 classifier definition modified for 3-class output
-class EfficientNetB3Classifier(nn.Module):
+# ResNet18 classifier definition
+class ResNet18Classifier(nn.Module):
     def __init__(self, num_classes=3):
-        super(EfficientNetB3Classifier, self).__init__()
+        super(ResNet18Classifier, self).__init__()
         
-        weights = models.EfficientNet_B3_Weights.DEFAULT
-        self.model = models.efficientnet_b3(weights=weights)
+        weights = models.ResNet18_Weights.DEFAULT
+        self.model = models.resnet18(weights=weights)
         
-        num_features = self.model.classifier[1].in_features
-        self.model.classifier[1] = nn.Linear(num_features, num_classes)
+        num_features = self.model.fc.in_features
+        self.model.fc = nn.Linear(num_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
 
+# Device setup and model initialization
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = EfficientNetB3Classifier(num_classes=3).to(device)
+model = ResNet18Classifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001,
@@ -89,7 +92,8 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 10
+# Training and validation loop
+num_epochs = 15
 
 for epoch in range(num_epochs):
     model.train()
@@ -131,16 +135,18 @@ for epoch in range(num_epochs):
             images_val, labels_val = images_val.to(device), labels_val.to(device)
 
             outputs_val = model(images_val)
-            loss_val     = criterion(outputs_val, labels_val)
+            loss_val = criterion(outputs_val, labels_val)
 
             running_loss_val += loss_val.item()
 
-            _, predicted_val   = torch.max(outputs_val.data, 1)
+            _, predicted_val = torch.max(outputs_val.data, 1)
             
             correct_val += (predicted_val == labels_val).sum().item()
-            total_val   += labels_val.size(0)
+            total_val += labels_val.size(0)
 
             val_bar.set_postfix(loss=f"{running_loss_val/len(val_loader):.4f}",
                                 accuracy=f"{100*correct_val/total_val:.2f}%")
 
     scheduler.step(running_loss_val / len(val_loader))
+
+print("Training complete!")

@@ -48,7 +48,7 @@ train_transform = transforms.Compose([
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v3-Demo", transform=train_transform)
 
 # Stratified split (unchanged)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -84,7 +84,7 @@ model = InceptionV3Classifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
 # previous learning rate was 0.0001
-optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, weight_decay=1e-3)
+optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-3)
 
 # Keep the scheduler
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
@@ -93,7 +93,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 20
+num_epochs = 15
 
 for epoch in range(num_epochs):
     model.train()
@@ -151,3 +151,7 @@ for epoch in range(num_epochs):
     scheduler.step(running_loss_val / len(val_loader))
 
 print("Training complete!")
+
+# Save the trained model
+torch.save(model.state_dict(), 'inception_v3_model.pth')
+print("Model saved!")

@@ -1,7 +1,10 @@
-# Bytecode files
-*.pyc
-*.pyo
-__pycache__/
+
+# ignore grouped-image folder
+grouped-images-nii/
+
+# ignore grouped-image folder
+grouped-images-test/
+
 
 # Data and Image files
 *.pth
@@ -22,7 +25,33 @@ venv/
 */augmented-images/*
 */grouped-images/*
 
-# Logs and temp files
-*.log
-temp/
-tmp/
+
+# ignore metadata.csv
+/metadata.csv
+
+# ignore augmented-images folder
+augmented-images-v1/
+
+# ignore augmented-images folder
+augmented-images-test/
+
+# ignore augmented-images folder
+augmented-images-v2/
+
+# ignore augmented-images folder
+augmented-images-v3/
+
+# ignore augmented-images folder
+grouped-images-png/
+
+images/
+
+resnet-test.py
+
+augmented-images-v3-Demo/
+
+inception_v3_model.pth
+
+inception_v3_model.rar
+
+

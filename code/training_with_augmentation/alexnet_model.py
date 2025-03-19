@@ -8,7 +8,7 @@ import torchvision.models as models
 from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.model_selection import StratifiedKFold
 from PIL import Image
-from tqdm import tqdm  # added tqdm for progress bars
+from tqdm import tqdm
 
 # Dataset class definition (unchanged)
 class PngDataset(Dataset):
@@ -34,6 +34,8 @@ class PngDataset(Dataset):
         label = self.labels[idx]
 
         img = Image.open(img_path).convert("L")  # grayscale
+        img = np.stack([np.array(img)] * 3, axis=-1)  # replicate into 3 channels
+        img = Image.fromarray(img)
 
         if self.transform:
             img = self.transform(img)
@@ -44,10 +46,10 @@ class PngDataset(Dataset):
 train_transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5], std=[0.5])
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
 
 # Stratified split (unchanged)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -66,13 +68,6 @@ class AlexNetClassifier(nn.Module):
         # Load pretrained AlexNet model
         weights = models.AlexNet_Weights.DEFAULT
         self.model = models.alexnet(weights=weights)
-
-        # Modify first conv layer to accept grayscale images (1 channel)
-        original_weights = self.model.features[0].weight.data.mean(dim=1, keepdim=True)
-        self.model.features[0] = nn.Conv2d(1, 64, kernel_size=11, stride=4, padding=2)
-        
-        with torch.no_grad():
-            self.model.features[0].weight.copy_(original_weights)
 
         # Adjust classifier for our number of classes (3)
         num_features = self.model.classifier[6].in_features
@@ -95,7 +90,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 20
+num_epochs = 15
 
 for epoch in range(num_epochs):
     model.train()
@@ -152,5 +147,3 @@ for epoch in range(num_epochs):
     scheduler.step(running_loss_val / len(val_loader))
 
 print("Training complete!")
-
-

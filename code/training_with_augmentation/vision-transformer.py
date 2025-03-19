@@ -4,13 +4,13 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
-import torchvision.models as models
 from torch.utils.data import Dataset, DataLoader, Subset
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold
 from PIL import Image
 from tqdm import tqdm
+import timm
 
-# Dataset class definition (unchanged)
+# Dataset class definition (updated)
 class PngDataset(Dataset):
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
@@ -34,26 +34,26 @@ class PngDataset(Dataset):
         label = self.labels[idx]
 
         img = Image.open(img_path).convert("L")  # grayscale
+        img = np.stack([np.array(img)] * 3, axis=-1)  # replicate into 3 channels
+        img = Image.fromarray(img)
 
         if self.transform:
             img = self.transform(img)
 
         return img, label
 
-# EfficientNet-B3 expects 300x300 RGB images
+# Define transformations
 train_transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=3),  # convert grayscale to RGB (3 channels)
-    transforms.Resize((300, 300)),                # EfficientNet-B3 input size is 300x300
+    transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                         std=[0.229, 0.224, 0.225])
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v2", transform=train_transform)
 
-# Stratified split (80/20)
-skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-train_idx, val_idx = next(skf.split(np.zeros(len(dataset.labels)), dataset.labels))
+# KFold split (80/20)
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+train_idx, val_idx = next(kf.split(np.zeros(len(dataset))))
 
 train_subset = Subset(dataset, train_idx)
 val_subset   = Subset(dataset, val_idx)
@@ -61,22 +61,21 @@ val_subset   = Subset(dataset, val_idx)
 train_loader = DataLoader(train_subset, batch_size=16, shuffle=True)
 val_loader   = DataLoader(val_subset, batch_size=16, shuffle=False)
 
-# EfficientNet-B3 classifier definition modified for 3-class output
-class EfficientNetB3Classifier(nn.Module):
+train_subset.dataset.transform = train_transform
+val_subset.dataset.transform   = train_transform
+
+# Vision Transformer classifier definition
+class ViTClassifier(nn.Module):
     def __init__(self, num_classes=3):
-        super(EfficientNetB3Classifier, self).__init__()
-        
-        weights = models.EfficientNet_B3_Weights.DEFAULT
-        self.model = models.efficientnet_b3(weights=weights)
-        
-        num_features = self.model.classifier[1].in_features
-        self.model.classifier[1] = nn.Linear(num_features, num_classes)
+        super(ViTClassifier, self).__init__()
+        self.model = timm.create_model('vit_base_patch16_224', pretrained=True)
+        self.model.head = nn.Linear(self.model.head.in_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = EfficientNetB3Classifier(num_classes=3).to(device)
+model = ViTClassifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001,
@@ -89,7 +88,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=3,
                                                  verbose=True)
 
-num_epochs = 10
+num_epochs = 25
 
 for epoch in range(num_epochs):
     model.train()
@@ -144,3 +143,5 @@ for epoch in range(num_epochs):
                                 accuracy=f"{100*correct_val/total_val:.2f}%")
 
     scheduler.step(running_loss_val / len(val_loader))
+
+print("Training complete!")
