@@ -1,14 +1,30 @@
+
 # ignore grouped-image folder
 grouped-images-nii/
 
 # ignore grouped-image folder
 grouped-images-test/
 
-# ignore all nii files
-*.nii
 
-#ignore venv folder
+# Data and Image files
+*.pth
+*.png
+*.jpg
+*.jpeg
+*.csv
+*.md
+*.nii
+# Environment files
 venv/
+.env
+
+# OS generated files
+.DS_Store
+
+#Ignore all directories
+*/augmented-images/*
+*/grouped-images/*
+
 
 # ignore metadata.csv
 /metadata.csv
