@@ -6,6 +6,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from PIL import Image
 from io import BytesIO
+from fastapi.middleware.cors import CORSMiddleware
 
 # Class labels (must match your dataset)
 class_labels = ['AD', 'CN', 'MCI']
@@ -13,6 +14,13 @@ class_labels = ['AD', 'CN', 'MCI']
 # Initialize FastAPI app
 app = FastAPI(title="InceptionV3 Image Classifier API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Replace with your frontend URL if different
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Global variables for the model and device
 model = None
 device = None
@@ -60,35 +68,31 @@ def home():
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
-    """
-    Predict the class of an uploaded PNG image.
-    """
+    print(f"Received file with content_type={file.content_type}, filename={file.filename}")
+
     if file.content_type != "image/png":
-        raise HTTPException(status_code=400, detail="Please upload a PNG image.")
+        raise HTTPException(status_code=400, detail=f"Please upload a PNG image. Received content type: {file.content_type}")
 
     try:
-        # Read and preprocess the image
         contents = await file.read()
-        image = Image.open(BytesIO(contents)).convert("L")  # Convert to grayscale
-        
-        # Transform image (grayscale replicated to RGB and resized to 299x299)
+        image = Image.open(BytesIO(contents)).convert("L")
+
         transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=3),  # Replicate grayscale to 3 channels
-            transforms.Resize((299, 299)),                # Resize for InceptionV3 input size
+            transforms.Grayscale(num_output_channels=3),
+            transforms.Resize((299, 299)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+            transforms.Normalize(mean=[0.5]*3, std=[0.5]*3)
         ])
-        
-        input_tensor = transform(image).unsqueeze(0).to(device)  # Add batch dimension and send to device
-        
-        # Perform inference
+
+        input_tensor = transform(image).unsqueeze(0).to(device)
+
         with torch.no_grad():
             outputs = model(input_tensor)
             probabilities = torch.softmax(outputs[0], dim=0)
             confidence, predicted_class_idx = torch.max(probabilities, dim=0)
-        
+
         predicted_label = class_labels[predicted_class_idx.item()]
-        
+
         return JSONResponse(content={
             "predicted_class": predicted_label,
             "confidence": float(confidence)
