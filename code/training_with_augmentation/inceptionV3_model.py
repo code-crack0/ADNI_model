@@ -48,7 +48,7 @@ train_transform = transforms.Compose([
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images-v3-Demo", transform=train_transform)
+dataset = PngDataset(root_dir="./augmented-images-v3", transform=train_transform)
 
 # Stratified split (unchanged)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -68,9 +68,26 @@ class InceptionV3Classifier(nn.Module):
         weights = models.Inception_V3_Weights.DEFAULT
         self.model = models.inception_v3(weights=weights)
         
-        # Adjust classifier for our number of classes (3)
+        # # Freeze all layers except the last fully connected layer
+        # for param in self.model.parameters():
+        #     param.requires_grad = False
+
+        # # Selectively unfreeze specific layers
+        # for name, child in model.named_children():
+        #     if name in ['Mixed_7c', 'Mixed_7b', 'Mixed_7a']:  # Unfreeze specific blocks
+        #         for param in child.parameters():
+        #             param.requires_grad = True
+
+        # Adjust classifier with dropout for regularization
         num_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(num_features, num_classes)
+        self.model.fc = nn.Sequential(
+            nn.Dropout(p=0.50),  # Dropout layer added here
+            nn.Linear(num_features, num_classes)
+        )
+
+        # # Adjust classifier for our number of classes (3)
+        # num_features = self.model.fc.in_features
+        # self.model.fc = nn.Linear(num_features, num_classes)
         
         # Disable auxiliary outputs for simplicity
         self.model.aux_logits = False
@@ -86,14 +103,16 @@ criterion = nn.CrossEntropyLoss()
 # previous learning rate was 0.0001
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-3)
 
-# Keep the scheduler
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                 mode='min',
-                                                 factor=0.5,
-                                                 patience=3,
-                                                 verbose=True)
+# # Keep the scheduler
+# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+#                                                  mode='min',
+#                                                  factor=0.5,
+#                                                  patience=1)
 
-num_epochs = 15
+# reduces the learning rate by a factor of 0.5 every 5 epochs
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.5)
+
+num_epochs = 25
 
 for epoch in range(num_epochs):
     model.train()
@@ -147,11 +166,17 @@ for epoch in range(num_epochs):
             val_bar.set_postfix(loss=f"{running_loss_val/len(val_loader):.4f}",
                                 accuracy=f"{100*correct_val/total_val:.2f}%")
 
-    # Keep the scheduler step
-    scheduler.step(running_loss_val / len(val_loader))
+    # Step the scheduler
+    scheduler.step() # updates the learning rate at the end of each epoch
+    # # Keep the scheduler step
+    # scheduler.step(running_loss_val / len(val_loader))
+
+    # Log the updated learning rate
+    current_lr = scheduler.get_last_lr()
+    print(f"Epoch {epoch+1}: Current Learning Rate: {current_lr}")
 
 print("Training complete!")
 
-# Save the trained model
-torch.save(model.state_dict(), 'inception_v3_model.pth')
-print("Model saved!")
+# # Save the trained model
+# torch.save(model.state_dict(), 'inception_v3_model.pth')
+# print("Model saved!")

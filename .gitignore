@@ -18,6 +18,8 @@ grouped-images-test/
 venv/
 .env
 
+__pycache__/
+
 # OS generated files
 .DS_Store
 

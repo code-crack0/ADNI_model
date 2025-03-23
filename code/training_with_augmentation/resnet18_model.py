@@ -89,8 +89,7 @@ optimizer = optim.SGD(model.parameters(), lr=0.001,
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  mode='min',
                                                  factor=0.5,
-                                                 patience=3,
-                                                 verbose=True)
+                                                 patience=3,)
 
 # Training and validation loop
 num_epochs = 15
@@ -147,6 +146,11 @@ for epoch in range(num_epochs):
             val_bar.set_postfix(loss=f"{running_loss_val/len(val_loader):.4f}",
                                 accuracy=f"{100*correct_val/total_val:.2f}%")
 
+    # Keep the scheduler step
     scheduler.step(running_loss_val / len(val_loader))
+
+    # Log the updated learning rate
+    current_lr = scheduler.get_last_lr()
+    print(f"Epoch {epoch+1}: Current Learning Rate: {current_lr}")
 
 print("Training complete!")
