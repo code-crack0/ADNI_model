@@ -8,7 +8,8 @@ import torchvision.models as models
 from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.model_selection import StratifiedKFold
 from PIL import Image
-from tqdm import tqdm  # added tqdm for progress bars
+from tqdm import tqdm
+import matplotlib.pyplot as plt  # Import matplotlib
 
 # Dataset class definition (unchanged)
 class PngDataset(Dataset):
@@ -48,7 +49,7 @@ train_transform = transforms.Compose([
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
-dataset = PngDataset(root_dir="./augmented-images-v3-Demo", transform=train_transform)
+dataset = PngDataset(root_dir="./mri-images/augmented-images-v3", transform=train_transform)
 
 # Stratified split (unchanged)
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -68,9 +69,12 @@ class InceptionV3Classifier(nn.Module):
         weights = models.Inception_V3_Weights.DEFAULT
         self.model = models.inception_v3(weights=weights)
         
-        # Adjust classifier for our number of classes (3)
+        # Adjust classifier with dropout for regularization
         num_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(num_features, num_classes)
+        self.model.fc = nn.Sequential(
+            nn.Dropout(p=0.50),  # Dropout layer added here
+            nn.Linear(num_features, num_classes)
+        )
         
         # Disable auxiliary outputs for simplicity
         self.model.aux_logits = False
@@ -83,17 +87,18 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = InceptionV3Classifier(num_classes=3).to(device)
 
 criterion = nn.CrossEntropyLoss()
-# previous learning rate was 0.0001
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-3)
+optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, weight_decay=1e-3)
 
-# Keep the scheduler
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                 mode='min',
-                                                 factor=0.5,
-                                                 patience=3,
-                                                 verbose=True)
+# reduces the learning rate by a factor of 0.5 every 3 epochs
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.25)
 
-num_epochs = 15
+num_epochs = 30
+
+# Lists to store losses and accuracies
+train_losses = []
+val_losses = []
+train_accuracies = []
+val_accuracies = []
 
 for epoch in range(num_epochs):
     model.train()
@@ -147,10 +152,40 @@ for epoch in range(num_epochs):
             val_bar.set_postfix(loss=f"{running_loss_val/len(val_loader):.4f}",
                                 accuracy=f"{100*correct_val/total_val:.2f}%")
 
-    # Keep the scheduler step
-    scheduler.step(running_loss_val / len(val_loader))
+    # Step the scheduler
+    scheduler.step() # updates the learning rate at the end of each epoch
+
+    # Log the updated learning rate
+    current_lr = scheduler.get_last_lr()
+    print(f"Epoch {epoch+1}: Current Learning Rate: {current_lr}")
+
+    # Store the losses and accuracies
+    train_losses.append(running_loss_train / len(train_loader))
+    val_losses.append(running_loss_val / len(val_loader))
+    train_accuracies.append(100 * correct_train / total_train)
+    val_accuracies.append(100 * correct_val / total_val)
 
 print("Training complete!")
+
+# Plot the loss curves
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, num_epochs + 1), train_losses, label='Training Loss')
+plt.plot(range(1, num_epochs + 1), val_losses, label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Loss vs. Epochs')
+plt.legend()
+plt.show()
+
+# Plot the accuracy curves
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, num_epochs + 1), train_accuracies, label='Training Accuracy')
+plt.plot(range(1, num_epochs + 1), val_accuracies, label='Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy (%)')
+plt.title('Accuracy vs. Epochs')
+plt.legend()
+plt.show()
 
 # Save the trained model
 torch.save(model.state_dict(), 'inception_v3_model.pth')

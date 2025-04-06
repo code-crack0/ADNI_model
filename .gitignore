@@ -3,7 +3,7 @@
 grouped-images-nii/
 
 # ignore grouped-image folder
-grouped-images-test/
+grouped-images-test-nii/
 
 
 # Data and Image files
@@ -17,6 +17,8 @@ grouped-images-test/
 # Environment files
 venv/
 .env
+
+__pycache__/
 
 # OS generated files
 .DS_Store
@@ -54,4 +56,8 @@ inception_v3_model.pth
 
 inception_v3_model.rar
 
+SkullStripped_MiddleAxial_PNG_BET
 
+SkullStripped_MiddleAxial_PNG_SS
+
+mri-images/

@@ -1,17 +1,14 @@
 import os
-import shutil
 import random
-import nibabel as nib
-import numpy as np
 from collections import Counter
 from torchvision import transforms
 from PIL import Image
 
 # Define paths
-# grouped-images is the original path of all the nii files
-original_dir = "./grouped-images"
-# new augmented images will be saved in this directory
-augmented_dir = "./augmented-images-v2"
+# Directory containing original PNG files
+original_dir = "./png_output_1mm"
+# Directory to save augmented images
+augmented_dir = "T1_augmented_median_axial_slice"
 os.makedirs(augmented_dir, exist_ok=True)
 
 # Define transformations
@@ -28,56 +25,46 @@ print("Class distribution before augmentation:", class_counts)
 for cls in class_counts:
     os.makedirs(os.path.join(augmented_dir, cls), exist_ok=True)
 
-# Function to extract and save middle axial slice
-def save_middle_slice(img_path, save_path):
-    # Load 3D MRI scan
-    mri_image = nib.load(img_path)
-    mri_data = mri_image.get_fdata()
-    
-    # Extract middle axial slice
-    mid_slice_idx = mri_data.shape[0] // 2
-    mid_slice = mri_data[mid_slice_idx,:,:]
-    
-    # Normalize to 0-255 for image processing
-    mid_slice = (mid_slice - np.min(mid_slice)) / (np.max(mid_slice) - np.min(mid_slice)) * 255
-    mid_slice = mid_slice.astype(np.uint8)
-    
-    image = Image.fromarray(mid_slice).convert("RGB")
-    image.save(save_path)
-
 # Process images
 for cls, count in class_counts.items():
     class_dir = os.path.join(original_dir, cls)
     augmented_class_dir = os.path.join(augmented_dir, cls)
     images = os.listdir(class_dir)
     
-    # Copy original images (middle slice only)
+    # Copy original images
     for img in images:
         img_path = os.path.join(class_dir, img)
-        save_path = os.path.join(augmented_class_dir, img.replace('.nii', '.png'))
-        save_middle_slice(img_path, save_path)
+        save_path = os.path.join(augmented_class_dir, img)
+        image = Image.open(img_path).convert("L")
+        image.save(save_path)
     
     # Augment images to balance dataset
     needed = max_count - count
     
     # Track which images have been used for augmentation and which augmentation was applied
-    augmentation_tracking = {}  # Format: {image_name: [horizontal_used, vertical_used]}
-    
+    # augmentation_tracking = {}  # Format: {image_name: [horizontal_used, vertical_used]}
+    augmentation_tracking = {img: [False, False] for img in images}  # Format: {image_name: [horizontal_used, vertical_used]}
+
     while needed > 0:
-        # Initialize the tracking dict for all images if not already done
-        if not augmentation_tracking:
-            for img in images:
-                augmentation_tracking[img] = [False, False]  # [horizontal_used, vertical_used]
+        # # Initialize the tracking dict for all images if not already done
+        # if not augmentation_tracking:
+        #     for img in images:
+        #         augmentation_tracking[img] = [False, False]  # [horizontal_used, vertical_used]
         
         # Find images that haven't had both augmentations applied
         available_images = [img for img, status in augmentation_tracking.items() 
                            if not (status[0] and status[1])]
         
-        # If all images have had both augmentations, reset and start over
+        # # If all images have had both augmentations, reset and start over
+        # if not available_images:
+        #     for img in images:
+        #         augmentation_tracking[img] = [False, False]
+        #     available_images = images
+
+        # If no more available images, stop augmentation
         if not available_images:
-            for img in images:
-                augmentation_tracking[img] = [False, False]
-            available_images = images
+            print(f"Not enough images in class '{cls}' to generate the required augmented images.")
+            break
         
         # Select a random image from available ones
         img_name = random.choice(available_images)
@@ -99,18 +86,9 @@ for cls, count in class_counts.items():
         else:
             augmentation_tracking[img_name][1] = True
         
-        # Load and process middle slice
+        # Load and process image
         img_path = os.path.join(class_dir, img_name)
-        mri_image = nib.load(img_path)
-        mri_data = mri_image.get_fdata()
-        mid_slice_idx = mri_data.shape[0] // 2
-        mid_slice = mri_data[mid_slice_idx,:,:]
-        
-        # Normalize to 0-255
-        mid_slice = (mid_slice - np.min(mid_slice)) / (np.max(mid_slice) - np.min(mid_slice)) * 255
-        mid_slice = mid_slice.astype(np.uint8)
-        
-        image = Image.fromarray(mid_slice).convert("RGB")
+        image = Image.open(img_path).convert("RGB")
         
         # Apply the selected augmentation
         if use_horizontal:
@@ -121,7 +99,7 @@ for cls, count in class_counts.items():
             aug_type = "vflip"
         
         # Save augmented image
-        new_name = f"aug_{aug_type}_{needed}_{img_name.replace('.nii', '.png')}"
+        new_name = f"aug_{aug_type}_{needed}_{img_name}"
         augmented_image.save(os.path.join(augmented_class_dir, new_name))
         needed -= 1
 
