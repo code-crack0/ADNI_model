@@ -89,6 +89,9 @@ async def predict(file: UploadFile = File(...)):
         with torch.no_grad():
             outputs = model(input_tensor)
             probabilities = torch.softmax(outputs[0], dim=0)
+            # confidence is simply the probability assigned to that class
+            # in this case, we are looking at the class with the highest
+            # probability
             confidence, predicted_class_idx = torch.max(probabilities, dim=0)
 
         predicted_label = class_labels[predicted_class_idx.item()]
