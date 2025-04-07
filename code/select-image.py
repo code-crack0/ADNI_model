@@ -26,11 +26,11 @@ def select_and_copy_images(src_dir, dest_dir, category, num_images):
 
 if __name__ == "__main__":
     # Define your directories here:
-    SRC_DIR = "./png_output_1mm"
+    SRC_DIR = "./mri-images/T1_augmented_subject_wise_splits_hflip"
     DEST_DIR = "MCI-images"
 
     # Number of images to select from each category
-    NUM_IMAGES = 1000
+    NUM_IMAGES = 1078
 
     # Categories to process (only CN and MCI as per your request)
     # categories_to_process = ["CN", "MCI"]

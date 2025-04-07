@@ -2,63 +2,36 @@ import torch
 import torchvision.models as models
 import torch.nn as nn
 from torchvision import transforms
-import numpy as np
-import nibabel as nib
-from torch.utils.data import DataLoader, Dataset
-import os
-from glob import glob
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader
+from torchvision.models import Inception_V3_Weights
 
-# Define class names and labels
-class_labels = {"AD": 0, "CN": 1, "MCI": 2}  # Assign numeric labels
-
-# Load InceptionV3 Model
+# Define device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = models.inception_v3(pretrained=True)  # aux_logits=True by default
-model.fc = nn.Linear(model.fc.in_features, len(class_labels))  # Adjust main classifier
-model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, len(class_labels))  # Adjust auxiliary classifier
-model.to(device)
-model.eval()  # Set to inference mode
 
+# Load the pre-trained InceptionV3 model with updated weights argument
+model = models.inception_v3(weights=Inception_V3_Weights.IMAGENET1K_V1)
 
-# Transform for AlexNet Input
+# Modify the final fully connected layer to match the number of classes (3)
+model.fc = nn.Linear(in_features=model.fc.in_features, out_features=3)
+
+# Move the model to the appropriate device (GPU or CPU)
+model = model.to(device)
+
+# Set the model to evaluation mode
+model.eval()
+
+# Transform for InceptionV3 Input
 transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize((299, 299)),
+    transforms.Grayscale(num_output_channels=3),  # Convert grayscale to 3 channels
+    transforms.Resize((299, 299)),               # Resize to 299x299 as required by InceptionV3
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Standard normalization for InceptionV3
 ])
 
-# Custom Dataset Class
-class NiiDataset(Dataset):
-    def __init__(self, root_dir):
-        self.file_paths = []
-        self.labels = []
-
-        # Iterate through AD, CN, MCI folders
-        for class_name, label in class_labels.items():
-            class_path = os.path.join(root_dir, class_name)
-            nii_files = glob(os.path.join(class_path, "*.nii"))  # Change to "*.nii.gz" if needed
-
-            self.file_paths.extend(nii_files)
-            self.labels.extend([label] * len(nii_files))
-
-    def __len__(self):
-        return len(self.file_paths)
-
-    def __getitem__(self, idx):
-        nii_path = self.file_paths[idx]
-        label = self.labels[idx]
-
-        nii_img = nib.load(nii_path).get_fdata()
-        mid_slice = nii_img[nii_img.shape[0] // 2,:, : ]  # Middle axial slice
-        mid_slice = np.stack([mid_slice] * 3, axis=-1)  # Convert grayscale to 3-channel
-
-        img_tensor = transform(mid_slice)
-        return img_tensor, label
-
-# Load Dataset
-dataset_root = "../grouped-images"
-dataset = NiiDataset(dataset_root)
+# Load Dataset using ImageFolder
+dataset_root = "./mri-images/T1_png_1mm"
+dataset = ImageFolder(root=dataset_root, transform=transform)
 dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
 
 # Inference and Accuracy Calculation

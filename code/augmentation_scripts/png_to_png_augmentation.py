@@ -6,9 +6,9 @@ from PIL import Image
 
 # Define paths
 # Directory containing original PNG files
-original_dir = "./png_output_1mm"
+original_dir = "./mri-images/T1_png_1mm"
 # Directory to save augmented images
-augmented_dir = "T1_augmented_median_axial_slice"
+augmented_dir = "T1_augmented_median_axial_slice_subject_wise_splits"
 os.makedirs(augmented_dir, exist_ok=True)
 
 # Define transformations
@@ -88,7 +88,7 @@ for cls, count in class_counts.items():
         
         # Load and process image
         img_path = os.path.join(class_dir, img_name)
-        image = Image.open(img_path).convert("RGB")
+        image = Image.open(img_path).convert("L")
         
         # Apply the selected augmentation
         if use_horizontal:
@@ -99,8 +99,13 @@ for cls, count in class_counts.items():
             aug_type = "vflip"
         
         # Save augmented image
-        new_name = f"aug_{aug_type}_{needed}_{img_name}"
+        base_name, ext = os.path.splitext(img_name)
+        new_name = f"{base_name}_aug_{needed}_{aug_type}{ext}"
         augmented_image.save(os.path.join(augmented_class_dir, new_name))
         needed -= 1
+
+        # new_name = f"{img_name}_aug_{aug_type}_{needed}"
+        # augmented_image.save(os.path.join(augmented_class_dir, new_name))
+        # needed -= 1
 
 print("Augmentation complete. Balanced dataset created in", augmented_dir)
