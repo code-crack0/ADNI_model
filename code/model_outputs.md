@@ -70,9 +70,8 @@ Due to the computationally expensive nature of cross validation, in our case 5 f
 | InceptionV3   | 98.43%                    | 93.55%                            | 15                       | 0.0001            |
 | VGGNet16      | 99.42%                    | 91.93%                            | 15                       | 0.0001            |
 | ViT           | 97.51%                    | 86.13%                            | 15                       | 0.0001            |
-| EffcientNetB3 | 79.65%            | 59.86%                            | 10                | 0.0001             |
-| ResNet18      | 99.99%            | 67.91%                            | 30                | 0.0001            |
-
+| ResNet18      | 99.17%                    | 93.39%                            | 15                       | 0.0001            |
+| EffcientNetB3 | 98.74%                    | 93.10%                            | 15                       | 0.0001             |
 
 ----------------------
 
