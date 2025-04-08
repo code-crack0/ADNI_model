@@ -4,80 +4,41 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 import torchvision.models as models
-import nibabel as nib
-import numpy as np
-from torch.utils.data import Dataset, DataLoader, Subset
-from PIL import Image
+from torch.utils.data import DataLoader, Subset
+from torchvision.datasets import ImageFolder
 from sklearn.model_selection import train_test_split
 from torchvision.models import AlexNet_Weights
 from collections import Counter
 from tqdm import tqdm
-
-# Define dataset class
-class NiiDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        self.root_dir = root_dir
-        self.transform = transform
-        self.classes = ['AD', 'CN', 'MCI']
-        self.image_paths = []
-        self.labels = []
-
-        # Load images and labels
-        for label, class_name in enumerate(self.classes):
-            class_dir = os.path.join(root_dir, class_name)
-            for file in os.listdir(class_dir):
-                if file.endswith(".nii") or file.endswith(".nii.gz"):
-                    self.image_paths.append(os.path.join(class_dir, file))
-                    self.labels.append(label)
-
-    def __len__(self):
-        return len(self.image_paths)
-
-    def __getitem__(self, idx):
-        nii_path = self.image_paths[idx]
-        label = self.labels[idx]
-
-        # Load NIfTI file
-        nii_img = nib.load(nii_path).get_fdata()
-
-        # Get middle axial slice
-        mid_slice = nii_img[nii_img.shape[0] // 2, :, :]
-
-        # Normalize image
-        mid_slice = (mid_slice - np.min(mid_slice)) / (np.max(mid_slice) - np.min(mid_slice)) * 255.0
-        mid_slice = mid_slice.astype(np.uint8)
-
-        # Convert to PIL Image
-        img = Image.fromarray(mid_slice)
-
-        # Apply transformations
-        if self.transform:
-            img = self.transform(img)
-
-        return img, label
+from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, classification_report
+import pandas as pd
 
 # Define transformations
 transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=3),  # Convert grayscale to 3 channels
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5], std=[0.5])  # Single channel normalization
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Standard normalization for 3 channels
 ])
 
-# Load full dataset
-dataset = NiiDataset(root_dir="./grouped_images", transform=transform)
+# Load dataset using ImageFolder
+dataset_root = "./mri-images/T1_png_1mm"
+dataset = ImageFolder(root=dataset_root, transform=transform)
 
 # First split: train (70%) and temp (30%)
 train_indices, temp_indices = train_test_split(
     range(len(dataset)),
     test_size=0.3,
-    stratify=dataset.labels
+    stratify=dataset.targets,
+    random_state=42
 )
 
 # Second split: temp into validation (10% of total) and test (20% of total)
 val_indices, test_indices = train_test_split(
     temp_indices,
     test_size=2/3,  # 2/3 of 30% is 20% of the total dataset
-    stratify=[dataset.labels[i] for i in temp_indices]
+    stratify=[dataset.targets[i] for i in temp_indices],
+    random_state=42
 )
 
 train_dataset = Subset(dataset, train_indices)
@@ -85,31 +46,31 @@ val_dataset = Subset(dataset, val_indices)
 test_dataset = Subset(dataset, test_indices)
 
 # Print class distribution in the full dataset
-print("Full dataset class distribution:", Counter(dataset.labels))
+print("Full dataset class distribution:", Counter(dataset.targets))
 
 # Print class distribution in the training set
-train_labels = [dataset.labels[i] for i in train_indices]
+train_labels = [dataset.targets[i] for i in train_indices]
 print("Training set class distribution:", Counter(train_labels))
 
 # Print class distribution in the validation set
-val_labels = [dataset.labels[i] for i in val_indices]
+val_labels = [dataset.targets[i] for i in val_indices]
 print("Validation set class distribution:", Counter(val_labels))
 
 # Print class distribution in the test set
-test_labels = [dataset.labels[i] for i in test_indices]
+test_labels = [dataset.targets[i] for i in test_indices]
 print("Test set class distribution:", Counter(test_labels))
 
 train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
 
-# Define model (AlexNet with single-channel input)
+# Define model (AlexNet with 3-channel input for grayscale images)
 class AlexNetClassifier(nn.Module):
     def __init__(self, num_classes=3):
         super(AlexNetClassifier, self).__init__()
-        # using updated weights
-        self.model = models.alexnet(weights=AlexNet_Weights.DEFAULT)
-        self.model.features[0] = nn.Conv2d(1, 64, kernel_size=11, stride=4, padding=2)  # Adjust for single channel
+        # Using updated weights
+        self.model = models.alexnet(weights=AlexNet_Weights.IMAGENET1K_V1)
+        # No need to modify the first convolutional layer since it already expects 3 channels
         self.model.classifier[6] = nn.Linear(self.model.classifier[6].in_features, num_classes)  # Adjust output classes
 
     def forward(self, x):
@@ -122,7 +83,7 @@ model = AlexNetClassifier(num_classes=3).to(device)
 
 # Define loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 # Training loop with validation
 num_epochs = 10
@@ -176,6 +137,12 @@ print("Training complete!")
 # Evaluate on test set
 model.eval()
 test_loss, correct, total = 0.0, 0, 0
+all_labels = []
+all_predictions = []
+
+# Reverse the class_to_idx mapping to get idx_to_class
+idx_to_class = {v: k for k, v in dataset.class_to_idx.items()}
+
 with torch.no_grad():
     for images, labels in tqdm(test_loader, desc="Testing"):
         images, labels = images.to(device), labels.to(device)
@@ -188,7 +155,31 @@ with torch.no_grad():
         correct += (predicted == labels).sum().item()
         total += labels.size(0)
 
+        # Collect all labels and predictions for metrics
+        all_labels.extend(labels.cpu().numpy())
+        all_predictions.extend(predicted.cpu().numpy())
+
 test_loss /= len(test_loader)
 test_accuracy = correct / total * 100
 
-print(f"Test Loss: {test_loss:.4f}, Test Acc: {test_accuracy:.2f}%")
+# Convert numeric predictions and labels to class names
+all_labels_names = [idx_to_class[label] for label in all_labels]
+all_predictions_names = [idx_to_class[pred] for pred in all_predictions]
+
+# Calculate confusion matrix
+conf_matrix = confusion_matrix(all_labels, all_predictions)
+
+# Create a DataFrame for better visualization
+conf_matrix_df = pd.DataFrame(
+    conf_matrix,
+    index=[f"True: {label}" for label in dataset.classes],  # True labels
+    columns=[f"Pred: {label}" for label in dataset.classes]  # Predicted labels
+)
+
+# Print metrics
+print("\nConfusion Matrix:")
+print(conf_matrix_df)
+
+# Print detailed classification report
+print("\nClassification Report:")
+print(classification_report(all_labels, all_predictions, target_names=dataset.classes))

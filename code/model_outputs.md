@@ -3,48 +3,18 @@
 ## **Inference Accuracy**
 | Model          | Accuracy |
 |---------------|----------|
-| **AlexNet**   | 17.81%   |
-| **ResNet18**  | 52.89%   |
-| **EfficientNet** | 17.78% |
-| **VGG16**     | 17.46%   |
-| **InceptionV3**  |  28.32% |
+| **AlexNet**   | 29.68%   |
+| **ResNet18**  | 40.25%   |
+| **EfficientNetB3** | 42.03% |
+| **VGG16**     | 52.21%   |
+| **InceptionV3**  |  40.67% |
 
 ---
 
-## **Model Performance with Imbalanced Dataset**
-
-| Model          | Train Accuracy | Validation Accuracy| Test Accuracy |
-|---------------|----------|----------|------------|
-| **AlexNet**   | 52.89%   | 52.75% | 52.99% |
-| **ResNet18**  | 62.17%   | 43.04% | 42.16% |
-| **EfficientNetb3** | 83.28% | 59.87% | 58.80% |  
-| **VGG16**     |  52.89%  | 52.75% | 52.99% | 
-| **InceptionV3** |  51.78%  | 47.25% | 47.98% | 
-
----
-
-## **Training Details (ResNet50 - With UnderSampling)**
-| Epoch | Train Loss | Train Accuracy | Val Loss | Val Accuracy |
-|-------|-----------|---------------|----------|-------------|
-| 1     | 1.1471    | 37.28%        | 1.1009   | 30.69%      |
-| 2     | 1.0833    | 41.61%        | 1.5384   | 23.42%      |
-| 3     | 1.0646    | 42.15%        | 1.3209   | 51.05%      |
-| 4     | 1.0321    | 45.55%        | 1.1372   | 37.00%      |
-| 5     | 1.0025    | 48.11%        | 2.7209   | 26.33%      |
-| 6     | 0.9821    | 50.35%        | 1.5455   | 29.89%      |
-| 7     | 0.9565    | 53.91%        | 1.1063   | 40.39%      |
-| 8     | 0.9325    | 53.75%        | 1.6276   | 20.36%      |
-| 9     | 0.8946    | 57.00%        | 1.8916   | 27.14%      |
-| 10    | 0.8385    | 61.87%        | 1.6393   | 32.96%      |
-
----
-
-## **Observations**
-1. **AlexNet, EfficientNet, and VGG16 showed poor inference accuracy (~17-18%)**, indicating they struggle with the dataset.
-2. **ResNet18 achieved the highest inference accuracy (52.89%)**, suggesting it is better suited for the task.
-3. **VGG16 had better test accuracy (52.99%)** compared to ResNet18 (42.16%), despite poor inference accuracy.
-4. **ResNet50 training showed improvement in accuracy over epochs, but validation accuracy fluctuated** and dropped in later epochs.
-5. **Overfitting might be an issue in ResNet50**, as validation loss and accuracy do not consistently improve.
+## **Training Details (ResNet18 - With UnderSampling | Adam Optimizer | LR= 0.0001 | 5 Fold CV 10 Epochs)**
+| Model        | Average Train Accuracy | Average Val Accuracy |
+|--------------|------------------------|----------------------|
+| ResNet18     | 98.22%                 | 77.62%               |
 
 ---
 
@@ -55,9 +25,6 @@
 - **Fine-tune pre-trained models** on the dataset instead of training from scratch.
 
 ---
-
-### **Conclusion**
-ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting need further investigation to improve generalization.
 
 ## Model Training and Testing Conducted via 5-Fold Cross Validation
 
@@ -93,6 +60,18 @@ ResNet18 and VGG16 seem to perform best, but dataset imbalance and overfitting n
 | DenseNet-121  | 99.77%            | 71.07%                            | 15                | 0.001             |
 | ResNet18      | 99.99%            | 67.91%                            | 30                | 0.0001            |
 | ResNet18      | 100%              | 64.92%                            | 15                | 0.001             |
+
+## Model Performance for T1_augmented_hflip (horizontal flips, 900 ~ samples per class)
+
+Due to the computationally expensive nature of cross validation, in our case 5 fold cross validation, we implemented a an early stopping where if the val_loss doesn't improve after 5 epochs, it breaks and moves on to the next fold. We used the Adam Optimizer with a LR of 0.0001
+
+| Model         | Average Training Accuracy | Average Validation Accuracy       | Epochs Per Fold          | **Learning Rate** |
+|---------------|---------------------------|-----------------------------------|--------------------------|-------------------|
+| InceptionV3   | 98.43%                    | 93.55%                            | 15                       | 0.0001            |
+| VGGNet16      | 99.42%                    | 91.93%                            | 15                       | 0.0001            |
+| ViT           | 97.51%                    | 86.13%                            | 15                       | 0.0001            |
+| ResNet18      | 99.17%                    | 93.39%                            | 15                       | 0.0001            |
+| EffcientNetB3 | 98.74%                    | 93.10%                            | 15                       | 0.0001             |
 
 ----------------------
 

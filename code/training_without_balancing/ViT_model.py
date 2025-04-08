@@ -7,7 +7,7 @@ import torchvision.models as models
 from torch.utils.data import DataLoader, Subset
 from torchvision.datasets import ImageFolder
 from sklearn.model_selection import train_test_split
-from torchvision.models import VGG16_Weights
+from torchvision.models import vit_b_16, ViT_B_16_Weights
 from collections import Counter
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, classification_report
@@ -16,9 +16,9 @@ import pandas as pd
 # Define transformations
 transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=3),  # Convert grayscale to 3 channels
-    transforms.Resize((224, 224)),               # Resize to 224x224 as required by VGGNet
+    transforms.Resize((224, 224)),               # Resize to 224x224 as required by ViT
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Standard normalization for VGGNet
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Standard normalization for ViT
 ])
 
 # Load dataset using ImageFolder
@@ -64,14 +64,14 @@ train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
 
-# Define model (VGGNet-16 with 3-channel input for grayscale images)
-class VGG16Classifier(nn.Module):
+# Define model (ViT with 3-channel input for grayscale images)
+class ViTClassifier(nn.Module):
     def __init__(self, num_classes=3):
-        super(VGG16Classifier, self).__init__()
-        # Load the pre-trained VGG-16 model
-        self.model = models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1)
+        super(ViTClassifier, self).__init__()
+        # Load the pre-trained ViT model
+        self.model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
         # Modify the final fully connected layer to match the number of classes
-        self.model.classifier[6] = nn.Linear(self.model.classifier[6].in_features, num_classes)
+        self.model.heads.head = nn.Linear(self.model.heads.head.in_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
@@ -79,7 +79,7 @@ class VGG16Classifier(nn.Module):
 # Model setup
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
-model = VGG16Classifier(num_classes=3).to(device)
+model = ViTClassifier(num_classes=3).to(device)
 
 # Define loss and optimizer
 criterion = nn.CrossEntropyLoss()
