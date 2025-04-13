@@ -3,11 +3,13 @@
 ## **Inference Accuracy**
 | Model          | Accuracy |
 |---------------|----------|
-| **AlexNet**   | 29.68%   |
-| **ResNet18**  | 40.25%   |
-| **EfficientNetB3** | 42.03% |
-| **VGG16**     | 52.21%   |
-| **InceptionV3**  |  40.67% |
+| **AlexNet**   | 25.15%   |
+| **ResNet18**  | 21.79%   |
+| **EfficientNetB3** | 30.36% |
+| **VGG16**     | 29.29%   |
+| **InceptionV3**  |  29.68% |
+| **ViT**  |  27.22% |
+| **EfficientNetB7** | 17.43% |
 
 ---
 
@@ -67,11 +69,13 @@ Due to the computationally expensive nature of cross validation, in our case 5 f
 
 | Model         | Average Training Accuracy | Average Validation Accuracy       | Epochs Per Fold          | **Learning Rate** |
 |---------------|---------------------------|-----------------------------------|--------------------------|-------------------|
+| AlexNet       | 97.88%                    | 92.84.%                           | 15                       | 0.0001            |
 | InceptionV3   | 98.43%                    | 93.55%                            | 15                       | 0.0001            |
 | VGGNet16      | 99.42%                    | 91.93%                            | 15                       | 0.0001            |
 | ViT           | 97.51%                    | 86.13%                            | 15                       | 0.0001            |
 | ResNet18      | 99.17%                    | 93.39%                            | 15                       | 0.0001            |
-| EffcientNetB3 | 98.74%                    | 93.10%                            | 15                       | 0.0001             |
+| EffcientNetB3 | 98.74%                    | 93.10%                            | 15                       | 0.0001            |
+| EffcientNetB7 | 98.61%                    | 92.94%                            | 15                       | 0.0001            |
 
 ----------------------
 
@@ -103,3 +107,5 @@ A paper from Harvard student [citation required] detailed the implementation of 
 One potential issue discovered in the dataset is the fact that despite selecting the middle axial slice of each .nii file, the images tend to vary somewhat. This occured despite selecting the same MRI description for each .nii file, ensuring consistent preprocessing of each file. To cope this, standardization and normalization of the nifti files had to be performed, first starting with the orientation of the
 nifti file to standard space via the FSL [citation] library. After this,  
 
+
+Limitation of Subject Wise Splitting [citation here] 
