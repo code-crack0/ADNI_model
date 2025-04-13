@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 import torchvision.transforms as transforms
+from torchvision.models import inception_v3, Inception_V3_Weights
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,14 +14,17 @@ import os
 class_labels = {0: "AD", 1: "CN", 2: "MCI"}
 
 # -------- 1. InceptionV3 Model Definition --------
+# Define the model (InceptionV3 with 3-channel input for grayscale images)
 class InceptionV3Classifier(nn.Module):
     def __init__(self, num_classes=3):
         super(InceptionV3Classifier, self).__init__()
-        weights = models.Inception_V3_Weights.DEFAULT
-        self.model = models.inception_v3(weights=weights)
-        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
+        # Load InceptionV3 with updated pre-trained weights
+        self.model = inception_v3(weights=Inception_V3_Weights.DEFAULT)
+        # Disable auxiliary outputs for simplicity
         self.model.aux_logits = False
         self.model.AuxLogits = None
+        # Modify the final fully connected layer to match the number of classes
+        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
@@ -86,12 +90,13 @@ def overlay_heatmap(image, heatmap):
     return cv2.addWeighted(np.array(image), 0.6, heatmap, 0.4, 0)
 
 def visualize_explanation(image_path, model, gradcam, save_path=None):
+    # Transformations: replicate grayscale channels to match InceptionV3's input requirements (3 channels)
     transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3),
-        transforms.Resize((299, 299)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                             std=[0.5, 0.5, 0.5])
+        transforms.Grayscale(num_output_channels=3),  # Convert grayscale to 3 channels
+        transforms.Resize((299, 299)),               # Resize to InceptionV3 input size
+        transforms.ToTensor(),                       # Convert to tensor
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],  # ImageNet mean
+                         std=[0.229, 0.224, 0.225])   # ImageNet std
     ])
 
     image = Image.open(image_path).convert("L")
@@ -137,12 +142,13 @@ def visualize_explanation(image_path, model, gradcam, save_path=None):
 
     plt.show()
 
+    # Transformations: replicate grayscale channels to match InceptionV3's input requirements (3 channels)
     transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3),
-        transforms.Resize((299, 299)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                             std=[0.5, 0.5, 0.5])
+        transforms.Grayscale(num_output_channels=3),  # Convert grayscale to 3 channels
+        transforms.Resize((299, 299)),               # Resize to InceptionV3 input size
+        transforms.ToTensor(),                       # Convert to tensor
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],  # ImageNet mean
+                         std=[0.229, 0.224, 0.225])   # ImageNet std
     ])
 
     image = Image.open(image_path).convert("L")
@@ -179,11 +185,12 @@ def visualize_explanation(image_path, model, gradcam, save_path=None):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = InceptionV3Classifier(num_classes=3).to(device)
-model.load_state_dict(torch.load("inception_v3_model.pth", map_location=device))
+model.load_state_dict(torch.load("../InceptionV3_model.pth"
+                                 , map_location=device))
 
 # Choose last convolutional block in InceptionV3
 gradcam = GradCAM(model, model.model.Mixed_7c)
 
 # Pick an example image (adjust path as needed)
-sample_image_path = "../mri-images/Test Cases/AD - ADNI_003_S_1257_MR_MPR-R__GradWarp__B1_Correction_Br_20080604161418378_S50263_I108436.png"
+sample_image_path = "./mri-images/Test Cases for T1_augmented_hflip/AD - aug_hflip_48_ADNI_067_S_0110_MR_MPR-R__GradWarp__B1_Correction_Br_20070730193829305_S27652_I63046_stripped.png"
 visualize_explanation(sample_image_path, model, gradcam, save_path="inception_gradcam_sample_output.png")

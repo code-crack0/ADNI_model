@@ -10,7 +10,7 @@ from glob import glob
 from torchvision.datasets import ImageFolder
 # Load the pre-trained AlexNet model with updated weights argument
 from torchvision.models import AlexNet_Weights
-
+from sklearn.metrics import classification_report
 
 # Define device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,6 +43,10 @@ dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
 correct = 0
 total = 0
 
+# Initialize lists to store true labels and predictions
+all_labels = []
+all_predictions = []
+
 with torch.no_grad():
     for images, labels in dataloader:
         images, labels = images.to(device), labels.to(device)
@@ -51,5 +55,15 @@ with torch.no_grad():
         correct += (predicted == labels).sum().item()
         total += labels.size(0)
 
+        # Append true labels and predictions to the lists
+        all_labels.extend(labels.cpu().numpy())
+        all_predictions.extend(predicted.cpu().numpy())
+
 accuracy = 100 * correct / total
 print(f"Accuracy: {accuracy:.2f}%")
+print()
+
+# Generate classification report
+report = classification_report(all_labels, all_predictions, target_names=dataset.classes)
+print("Classification Report:")
+print(report)

@@ -13,6 +13,9 @@ nii_img = nib.load(file_path)
 img_data = nii_img.get_fdata()
 print(f"Image data shape: {img_data.shape}")
 # the shape of the image data is (256, 256, 166) where
+# sagittal, coronal, and axial
+
+# prior to reorientation, the shape was (256, 256, 166) where
 # 256 is number of slices in the axial, (I think)
 # 256 is the number of slices in the coronal plane (I think)
 # 166 is the number of slices in sagittal plane
