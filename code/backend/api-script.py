@@ -210,6 +210,7 @@ from skimage import exposure
 from PIL import Image
 from io import BytesIO
 from torchvision.models import inception_v3, Inception_V3_Weights
+import matplotlib.patheffects as path_effects
 
 # Constants
 class_labels = ['AD', 'CN', 'MCI']
@@ -248,6 +249,63 @@ class InceptionV3Classifier(nn.Module):
     def forward(self, x):
         return self.model(x)
 
+# # GradCAM implementation
+# class GradCAM:
+#     def __init__(self, model, target_layer):
+#         self.model = model
+#         self.target_layer = target_layer
+#         self.gradients = None
+#         self.activations = None
+        
+#         # Register hooks
+#         def forward_hook(module, input, output):
+#             self.activations = output
+            
+#         def backward_hook(module, grad_input, grad_output):
+#             self.gradients = grad_output[0]
+        
+#         # Register hooks on the target layer
+#         target_layer.register_forward_hook(forward_hook)
+#         target_layer.register_backward_hook(backward_hook)
+    
+#     def generate_cam(self, input_image, target_class):
+#         # Forward pass
+#         output = self.model(input_image)
+        
+#         # Clear previous gradients
+#         self.model.zero_grad()
+        
+#         # Target for backprop
+#         one_hot = torch.zeros_like(output)
+#         one_hot[0, target_class] = 1
+        
+#         # Backward pass
+#         output.backward(gradient=one_hot, retain_graph=True)
+        
+#         # Get weights
+#         gradients = self.gradients.detach().cpu().data.numpy()[0]
+#         activations = self.activations.detach().cpu().data.numpy()[0]
+        
+#         # Global average pooling
+#         weights = np.mean(gradients, axis=(1, 2))
+        
+#         # Weighted combination of activation maps
+#         cam = np.zeros(activations.shape[1:], dtype=np.float32)
+#         for i, w in enumerate(weights):
+#             cam += w * activations[i, :, :]
+        
+#         # Apply ReLU to focus on positive contributions
+#         cam = np.maximum(cam, 0)
+        
+#         # Normalize CAM
+#         if np.max(cam) > 0:
+#             cam = cam / np.max(cam)
+        
+#         # Resize to input image size
+#         cam = cv2.resize(cam, (299, 299))
+        
+#         return cam
+
 # GradCAM implementation
 class GradCAM:
     def __init__(self, model, target_layer):
@@ -264,8 +322,9 @@ class GradCAM:
             self.gradients = grad_output[0]
         
         # Register hooks on the target layer
-        target_layer.register_forward_hook(forward_hook)
-        target_layer.register_backward_hook(backward_hook)
+        self.forward_handle = target_layer.register_forward_hook(forward_hook)
+        # Replace the deprecated register_backward_hook with register_full_backward_hook
+        self.backward_handle = target_layer.register_full_backward_hook(backward_hook)
     
     def generate_cam(self, input_image, target_class):
         # Forward pass
@@ -304,6 +363,11 @@ class GradCAM:
         cam = cv2.resize(cam, (299, 299))
         
         return cam
+        
+    def __del__(self):
+        # Remove hooks when the object is deleted
+        self.forward_handle.remove()
+        self.backward_handle.remove()
 
 # Function to overlay heatmap on original image
 def overlay_heatmap(original_image, cam):
@@ -437,6 +501,64 @@ def run_flirt(input_path, output_path):
             print(f"Input file does not exist: {input_path_str}")
         raise
 
+def overlay_heatmap_with_labels(original_image, cam, predicted_class, probability):
+    """
+    Create a clean heatmap visualization without bottom text.
+    """
+    # Convert PIL image to numpy array if needed
+    if isinstance(original_image, Image.Image):
+        original_image = np.array(original_image)
+    
+    # Create figure
+    fig = plt.figure(figsize=(10, 9))
+    ax = fig.add_subplot(111)
+    
+    # Convert to RGB if grayscale
+    if len(original_image.shape) == 2:
+        original_image_rgb = np.stack([original_image, original_image, original_image], axis=2)
+    else:
+        original_image_rgb = original_image
+        
+    # Create heatmap overlay
+    heatmap = cv2.applyColorMap(np.uint8(255 * cam), cv2.COLORMAP_JET)
+    heatmap = np.float32(heatmap) / 255.0
+    
+    # Convert to float
+    if original_image_rgb.dtype != np.float32:
+        original_image_rgb = original_image_rgb.astype(np.float32) / 255.0
+    
+    # Overlay with transparency
+    alpha = 0.4
+    overlaid = original_image_rgb * (1 - alpha) + heatmap * alpha
+    overlaid = np.clip(overlaid, 0, 1)
+    
+    # Display overlay
+    mappable = ax.imshow(overlaid)
+    
+    # Add colorbar
+    cbar = fig.colorbar(mappable, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label('Activation Intensity', rotation=270, labelpad=15)
+    
+    # Simple title with prediction
+    ax.set_title(f"Predicted: {predicted_class} ({probability:.1%})", 
+                fontsize=14, pad=10)
+    
+    # Remove ticks
+    ax.set_xticks([])
+    ax.set_yticks([])
+    
+    # Adjust layout - no bottom text
+    plt.tight_layout()
+    
+    # Convert to PIL Image
+    buf = BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    buf.seek(0)
+    plt_image = Image.open(buf)
+    plt.close()
+    
+    return plt_image
+
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
     if file.content_type not in ["application/nii", "application/nii.gz", "application/octet-stream"]:
@@ -501,9 +623,29 @@ async def predict(file: UploadFile = File(...)):
 
         predicted_label = class_labels[pred_class_idx.item()]
         
+        # # Generate GradCAM visualization
+        # cam = gradcam.generate_cam(input_tensor, pred_class_idx.item())
+        # heatmap_img = overlay_heatmap(pil_image.resize((299, 299)), cam)
+        
+        # # Save heatmap image
+        # heatmap_path = HEATMAP_DIR / f"{base_filename}_heatmap.png"
+        # heatmap_img.save(heatmap_path)
+        
+        # # Convert heatmap to base64 for response
+        # buffered = BytesIO()
+        # heatmap_img.save(buffered, format="PNG")
+        # heatmap_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
         # Generate GradCAM visualization
         cam = gradcam.generate_cam(input_tensor, pred_class_idx.item())
-        heatmap_img = overlay_heatmap(pil_image.resize((299, 299)), cam)
+        
+        # Use the new function with labels
+        heatmap_img = overlay_heatmap_with_labels(
+            pil_image.resize((299, 299)), 
+            cam,
+            predicted_label,
+            float(confidence)
+        )
         
         # Save heatmap image
         heatmap_path = HEATMAP_DIR / f"{base_filename}_heatmap.png"

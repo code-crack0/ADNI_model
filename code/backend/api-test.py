@@ -123,6 +123,17 @@ def test_prediction_with_error_handling():
             return None
 
 def print_prediction_results(result):
+    # """Display prediction results in a formatted way"""
+    # print("\n✅ PREDICTION SUCCESSFUL")
+    # print("-" * 30)
+    # print(f"🏷️  Predicted class: {result['predicted_class']}")
+    # print(f"🔢 Confidence: {result['probability']:.4f} ({result['probability']*100:.2f}%)")
+    
+    # if 'heatmap' in result:
+    #     print("🔍 GradCAM heatmap received")
+    # else:
+    #     print("❌ No heatmap returned in the response")
+
     """Display prediction results in a formatted way"""
     print("\n✅ PREDICTION SUCCESSFUL")
     print("-" * 30)
@@ -130,7 +141,9 @@ def print_prediction_results(result):
     print(f"🔢 Confidence: {result['probability']:.4f} ({result['probability']*100:.2f}%)")
     
     if 'heatmap' in result:
-        print("🔍 GradCAM heatmap received")
+        print("🔍 GradCAM heatmap received with region identification")
+        print("   - Heatmap shows the top 3 regions influencing the prediction")
+        print("   - Red/yellow areas indicate stronger influence on classification")
     else:
         print("❌ No heatmap returned in the response")
 
@@ -165,6 +178,23 @@ def save_results(result):
 
 def display_heatmap(result):
     """Display the heatmap using matplotlib"""
+    # if 'heatmap' not in result:
+    #     return
+        
+    # try:
+    #     image_data = base64.b64decode(result['heatmap'])
+    #     heatmap_image = Image.open(BytesIO(image_data))
+        
+    #     plt.figure(figsize=(10, 8))
+    #     plt.imshow(heatmap_image)
+    #     plt.title(f"GradCAM Heatmap - Predicted: {result['predicted_class']} ({result['probability']*100:.2f}%)")
+    #     plt.axis('off')
+    #     plt.tight_layout()
+    #     plt.show()
+    # except Exception as e:
+    #     print(f"❌ Failed to display heatmap: {e}")
+
+    """Display the enhanced GradCAM heatmap with labeled regions"""
     if 'heatmap' not in result:
         return
         
@@ -172,11 +202,19 @@ def display_heatmap(result):
         image_data = base64.b64decode(result['heatmap'])
         heatmap_image = Image.open(BytesIO(image_data))
         
-        plt.figure(figsize=(10, 8))
+        plt.figure(figsize=(12, 10))  # Slightly larger figure to accommodate labels
         plt.imshow(heatmap_image)
-        plt.title(f"GradCAM Heatmap - Predicted: {result['predicted_class']} ({result['probability']*100:.2f}%)")
+        plt.title(f"Enhanced GradCAM Analysis - Predicted: {result['predicted_class']} ({result['probability']*100:.2f}%)\n"
+                 f"Highlighted regions show areas most important for classification", 
+                 fontsize=12)
         plt.axis('off')
         plt.tight_layout()
+        
+        # Add explainer text below plot
+        plt.figtext(0.5, 0.01, 
+                   "Numbered circles mark the top 3 regions influencing the model's decision",
+                   ha="center", fontsize=10, bbox={"facecolor":"white", "alpha":0.7, "pad":5})
+        
         plt.show()
     except Exception as e:
         print(f"❌ Failed to display heatmap: {e}")
